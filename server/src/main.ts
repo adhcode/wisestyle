@@ -6,6 +6,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as compression from 'compression';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -13,13 +14,8 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   
-  // Enable CORS
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    credentials: true,
-  });
-
+  const configService = app.get(ConfigService);
+  
   // Security middleware
   app.use(helmet());
   
@@ -59,6 +55,15 @@ async function bootstrap() {
   // Set global prefix for API routes
   app.setGlobalPrefix('api');
 
+  // CORS configuration
+  app.enableCors({
+    origin: [
+      configService.get('FRONTEND_URL'),
+      'http://localhost:3000', // Development frontend
+    ],
+    credentials: true,
+  });
+
   // Global error handler
   app.use((err: any, req: any, res: any, next: any) => {
     logger.error('Unhandled error:', err);
@@ -69,8 +74,10 @@ async function bootstrap() {
     });
   });
 
+  // Get port from environment or use default
   const port = process.env.PORT || 3001;
+  
   await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap(); 
