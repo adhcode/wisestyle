@@ -3,7 +3,7 @@ services:
     name: wisestyle-api
     env: node
     rootDir: server
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --legacy-peer-deps && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /health
     envVars:
@@ -21,6 +21,10 @@ services:
         generateValue: true
       - key: JWT_EXPIRATION
         value: 24h
+      - key: FRONTEND_URL
+        value: https://wisestyle.vercel.app
+      - key: NEXT_PUBLIC_SOCKET_URL
+        value: https://wisestyle.vercel.app
 
 databases:
   - name: wisestyle-db
