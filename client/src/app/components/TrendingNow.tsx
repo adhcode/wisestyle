@@ -1,0 +1,286 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Heart } from 'lucide-react';
+import { useLikes } from '@/contexts/LikesContext';
+import { useCart } from '@/contexts/CartContext';
+import { Product, Size, Color } from '@/types/product';
+import CartButton from './CartButton';
+import { RateLimitError } from '@/utils/api-client';
+
+interface TrendingProduct {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    image: string;
+    description?: string;
+    categoryId?: string;
+    images?: string[];
+    isLimited?: boolean;
+    sizes?: Size[];
+    colors?: Color[];
+    tags?: string[];
+    inventory?: any[];
+    displaySection?: 'NONE'
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+const trendingProducts: TrendingProduct[] = [
+    {
+        id: 1,
+        name: 'Kaftan',
+        slug: 'kaftan',
+        price: 25000,
+        image: '/images/trending/kaftant.png',
+        description: '',
+        categoryId: '',
+        images: ['/images/trending/kaftant.png'],
+        isLimited: false,
+        sizes: [],
+        colors: [],
+        tags: [],
+        inventory: [],
+        displaySection: 'NONE',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+    {
+        id: 2,
+        name: 'Black Tshirt',
+        slug: 'black-tshirt',
+        price: 22000,
+        image: '/images/trending/blacktshirt.png',
+        description: '',
+        categoryId: '',
+        images: ['/images/trending/blacktshirt.png'],
+        isLimited: false,
+        sizes: [],
+        colors: [],
+        tags: [],
+        inventory: [],
+        displaySection: 'NONE',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+    { id: 3, name: 'Watch', slug: 'watch', price: 15000, image: '/images/trending/watches.png' },
+    { id: 4, name: 'Jean', slug: 'jean', price: 25000, image: '/images/trending/jean.png' },
+    { id: 5, name: 'Agbada', slug: 'agbada', price: 30000, image: '/images/new-arrivals/agbada.png' },
+    { id: 6, name: 'Sunglass', slug: 'sunglass', price: 20000, image: '/images/trending/sunglass.png' },
+    { id: 7, name: 'White Tshirt', slug: 'white-tshirt', price: 12000, image: '/images/trending/white-shirt.png' },
+    { id: 8, name: 'Chinos', slug: 'chinos', price: 27000, image: '/images/new-arrivals/chinos-trouser.png' },
+    { id: 9, name: 'Hats', slug: 'hats', price: 8000, image: '/images/trending/hat.png' },
+    { id: 10, name: 'Black Tshirt', slug: 'black-tshirt', price: 16000, image: '/images/trending/blacktshirt.png' },
+    { id: 11, name: 'White Tshirt', slug: 'white-tshirt', price: 24000, image: '/images/trending/white-shirt.png' },
+    { id: 12, name: 'Bracelet', slug: 'bracelet', price: 21000, image: '/images/trending/wristband.png' },
+];
+
+export default function TrendingNow() {
+    const { state: { likedProducts }, toggleLike } = useLikes();
+    const { addItem } = useCart();
+    const [selectedProduct, setSelectedProduct] = useState<TrendingProduct | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [rateLimitError, setRateLimitError] = useState<string | null>(null);
+
+    const openQuickView = (product: TrendingProduct, e: React.MouseEvent<HTMLElement>) => {
+        e.preventDefault();
+        setSelectedProduct(product);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setSelectedProduct(null);
+    };
+
+    const handleToggleLike = async (id: number) => {
+        try {
+            setRateLimitError(null);
+            await toggleLike(id);
+        } catch (error) {
+            if (error instanceof RateLimitError) {
+                setRateLimitError(`${error.message}. Please try again in ${Math.ceil(error.retryAfter)} seconds.`);
+                // Auto-dismiss the error after the retry period
+                setTimeout(() => setRateLimitError(null), error.retryAfter * 1000);
+            }
+            console.error('Error toggling like:', error);
+        }
+    };
+
+    return (
+        <section className="py-16 bg-[#FEFBF4]">
+            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
+                <h2 className="text-[32px] font-[400] text-[#1E1E1E] mb-8">Trending Now</h2>
+
+                {/* Rate limit error message */}
+                {rateLimitError && (
+                    <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded mb-6 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {rateLimitError}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-[16px] w-full">
+                    {trendingProducts.map((product) => (
+                        <Link
+                            key={product.id}
+                            href={`/product/${product.slug}`}
+                            className="group overflow-hidden flex flex-col w-full duration-200"
+                        >
+                            <div className="relative w-full aspect-[1/1]">
+                                <Image
+                                    src={product.image}
+                                    alt={product.name}
+                                    fill
+                                    className="object-cover object-center"
+                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                                />
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleToggleLike(product.id);
+                                    }}
+                                    className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
+                                >
+                                    <Heart
+                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(product.id)
+                                            ? 'fill-red-500 stroke-red-500'
+                                            : 'stroke-gray-600'
+                                            }`}
+                                    />
+                                </button>
+                                {/* Overlay on hover, desktop only */}
+                                <div className="hidden md:flex absolute left-0 right-0 bottom-0 h-12 items-end justify-center bg-[#FEFCF8B2] opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                                    <div className="flex items-center justify-center mb-2 gap-2 text-[#3B2305] text-[16px] font-medium">
+                                        <span
+                                            className="hover:underline cursor-pointer mr-6"
+                                            onClick={(e) => openQuickView(product, e)}
+                                        >
+                                            Quick View
+                                        </span>
+                                        <CartButton
+                                            product={{
+                                                id: product.id.toString(),
+                                                name: product.name,
+                                                slug: product.slug,
+                                                price: product.price,
+                                                description: product.description || '',
+                                                categoryId: product.categoryId || '',
+                                                images: product.images || [product.image],
+                                                isLimited: product.isLimited || false,
+                                                sizes: product.sizes || [],
+                                                colors: product.colors || [],
+                                                tags: product.tags || [],
+                                                inventory: product.inventory || [],
+                                                displaySection: (product.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
+                                                createdAt: product.createdAt || new Date(),
+                                                updatedAt: product.updatedAt || new Date()
+                                            }}
+                                            className="hover:underline cursor-pointer border border-l-[#D1B99B] border-r-0 border-t-0 border-b-0 px-6 py-1"
+                                            onSuccess={() => closeModal()}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col md:flex-row justify-between p-3 pl-0 items-start md:items-center">
+                                <span className="text-[16px] font-[600] md:font-[500] text-[#3B2305]">{product.name}</span>
+                                <span className="text-[16px] font-[500] text-[#3B2305]">₦{product.price.toLocaleString()}</span>
+                            </div>
+                            <div className="pb-3 block md:hidden">
+                                <CartButton
+                                    product={{
+                                            id: product.id.toString(),
+                                            name: product.name,
+                                            slug: product.slug,
+                                            price: product.price,
+                                        description: product.description || '',
+                                        categoryId: product.categoryId || '',
+                                        images: product.images || [product.image],
+                                        isLimited: product.isLimited || false,
+                                        sizes: product.sizes || [],
+                                        colors: product.colors || [],
+                                        tags: product.tags || [],
+                                        inventory: product.inventory || [],
+                                        displaySection: (product.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
+                                        createdAt: product.createdAt || new Date(),
+                                        updatedAt: product.updatedAt || new Date()
+                                    }}
+                                    className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
+                                />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
+            {/* Quick View Modal */}
+            {showModal && selectedProduct && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto relative">
+                        <button
+                            onClick={closeModal}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-900"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <div className="flex flex-col md:flex-row">
+                            {/* Product Image */}
+                            <div className="w-full md:w-1/2 relative h-[300px] md:h-[450px]">
+                                <Image
+                                    src={selectedProduct.image}
+                                    alt={selectedProduct.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+
+                            {/* Product Details */}
+                            <div className="w-full md:w-1/2 p-6 md:p-8">
+                                <h3 className="text-2xl font-medium text-[#3B2305] mb-2">{selectedProduct.name}</h3>
+                                <p className="text-xl font-medium text-[#3B2305] mb-6">₦{selectedProduct.price.toLocaleString()}</p>
+
+                                <div className="flex flex-col gap-3 mt-8">
+                                    <Link
+                                        href={`/product/${selectedProduct.slug}`}
+                                        className="block w-full bg-[#3B2305] text-white py-3 rounded mb-3 text-center hover:bg-[#4c2d08] transition-colors"
+                                    >
+                                        View Full Details
+                                    </Link>
+                                    <CartButton
+                                        product={{
+                                            id: selectedProduct.id.toString(),
+                                            name: selectedProduct.name,
+                                            slug: selectedProduct.slug,
+                                            price: selectedProduct.price,
+                                            description: selectedProduct.description || '',
+                                            categoryId: selectedProduct.categoryId || '',
+                                            images: selectedProduct.images || [selectedProduct.image],
+                                            isLimited: selectedProduct.isLimited || false,
+                                            sizes: selectedProduct.sizes || [],
+                                            colors: selectedProduct.colors || [],
+                                            tags: selectedProduct.tags || [],
+                                            inventory: selectedProduct.inventory || [],
+                                            displaySection: (selectedProduct.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
+                                            createdAt: selectedProduct.createdAt || new Date(),
+                                            updatedAt: selectedProduct.updatedAt || new Date()
+                                        }}
+                                        className="block w-full border border-[#D1B99B] text-[#3B2305] py-3 rounded text-center hover:bg-[#F9F5F0] transition-colors"
+                                        onSuccess={closeModal}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+} 
