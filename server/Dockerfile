@@ -14,11 +14,14 @@ RUN npm install --legacy-peer-deps
 # Copy app source
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
+# Clean dist directory and generate Prisma client
+RUN rm -rf dist && npx prisma generate
 
 # Build application
 RUN npm run build
+
+# Verify dist directory exists and contains main.js
+RUN ls -la dist && test -f dist/main.js
 
 # Expose port
 EXPOSE 3001
