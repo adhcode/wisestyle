@@ -16,15 +16,11 @@ services:
           name: wisestyle-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: wisestyle-redis
-          type: redis
-          property: connectionString
-
-  - type: redis
-    name: wisestyle-redis
-    ipAllowList: []
-    plan: free
+        value: redis://default:AYLWAAIjcDFmNTI2YmI4MTFiNWM0N2UyOTMwYjZjN2MyMDYyYjRjMHAxMA@suited-tahr-33494.upstash.io:6379
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 24h
 
 databases:
   - name: wisestyle-db
