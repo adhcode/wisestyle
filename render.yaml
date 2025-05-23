@@ -16,7 +16,7 @@ services:
       - key: REDIS_URL
         value: redis://default:AYLWAAIjcDFmNTI2YmI4MTFiNWM0N2UyOTMwYjZjN2MyMDYyYjRjMHAxMA@suited-tahr-33494.upstash.io:6379
       - key: JWT_SECRET
-        generateValue: true
+        value: "wisestyle-super-secret-jwt-key-2024"
       - key: JWT_EXPIRATION
         value: 24h
       - key: FRONTEND_URL
