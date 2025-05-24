@@ -33,7 +33,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                     return delay;
                 },
                 connectTimeout: 20000, // 20 seconds
-                keepAlive: 30000, // 30 seconds keepalive
                 noDelay: true
             },
             disableOfflineQueue: false,
@@ -156,7 +155,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                         return Math.min(retries * 2000, 10000);
                     },
                     connectTimeout: 20000,
-                    keepAlive: 30000, // 30 seconds keepalive
                     noDelay: true
                 },
                 disableOfflineQueue: false,
