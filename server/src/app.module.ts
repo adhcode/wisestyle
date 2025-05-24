@@ -15,23 +15,20 @@ import { UsersModule } from './users/users.module';
 import { UploadModule } from './upload/upload.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { PaymentModule } from './payment/payment.module';
+import * as Joi from 'joi';
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            cache: true,
-            envFilePath: ['.env'],
-            expandVariables: true,
-            validate: (config: Record<string, any>) => {
-                const requiredVars = ['JWT_SECRET', 'REDIS_URL'];
-                const missingVars = requiredVars.filter(key => !config[key]);
-                
-                if (missingVars.length > 0) {
-                    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-                }
-                
-                return config;
+            validationSchema: Joi.object({
+                JWT_SECRET: Joi.string().default('default_jwt_secret'),
+                REDIS_URL: Joi.string().default('redis://localhost:6379'),
+                DATABASE_URL: Joi.string().required(),
+            }),
+            validationOptions: {
+                allowUnknown: true,
+                abortEarly: false,
             },
         }),
         AuthModule,

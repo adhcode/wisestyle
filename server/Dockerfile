@@ -1,24 +1,28 @@
-# Base image
+# Use Node.js 18 Alpine as the base image
 FROM node:18-alpine
 
-# Create app directory
+# Set working directory
 WORKDIR /usr/src/app
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies with legacy peer deps flag
-RUN npm install --legacy-peer-deps
+# Install dependencies
+RUN npm install
 
-# Copy app source
+# Copy source code
 COPY . .
+
+# Create a .env file with default values (these will be overridden by Render's environment variables)
+RUN echo "JWT_SECRET=${JWT_SECRET:-default_jwt_secret}" > .env && \
+    echo "REDIS_URL=${REDIS_URL:-redis://localhost:6379}" >> .env
 
 # Clean dist directory and generate Prisma client
 RUN rm -rf dist && npx prisma generate
 
-# Build application with verbose output
-RUN npm run build --verbose
+# Build the application
+RUN npm run build
 
 # List contents of the directory to debug
 RUN ls -la && \
@@ -27,8 +31,8 @@ RUN ls -la && \
     echo "Contents of dist directory (if it exists):" && \
     ls -la dist || echo "dist directory not found"
 
-# Expose port
+# Expose the port
 EXPOSE 3001
 
-# Start the server
-CMD [ "npm", "run", "start:prod" ] 
+# Start the application
+CMD ["npm", "run", "start:prod"] 
