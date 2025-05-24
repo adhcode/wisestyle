@@ -8,8 +8,9 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm install
+# Clean npm cache and install dependencies with legacy peer deps
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
