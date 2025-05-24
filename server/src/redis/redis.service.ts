@@ -7,108 +7,265 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     private client: RedisClientType;
     private isConnected: boolean = false;
     private readonly logger = new Logger(RedisService.name);
-    private readonly maxRetries = 3;
-    private readonly retryDelay = 1000; // 1 second
+    private reconnectAttempts: number = 0;
+    private readonly maxReconnectAttempts: number = 5;
+    private healthCheckInterval: NodeJS.Timeout;
+    private readonly healthCheckIntervalMs: number = 30000; // 30 seconds
+    private lastOperationTime: number = Date.now();
+    private readonly maxIdleTime: number = 60000; // 60 seconds
+    private operationQueue: Array<() => Promise<void>> = [];
+    private isProcessingQueue: boolean = false;
 
     constructor(private configService: ConfigService) {
+        const redisUrl = this.configService.get('REDIS_URL');
+        this.logger.log(`Initializing Redis with URL: ${redisUrl}`);
+
         this.client = createClient({
-            url: this.configService.get('REDIS_URL'),
-            password: this.configService.get('REDIS_PASSWORD'),
+            url: redisUrl,
             socket: {
                 reconnectStrategy: (retries) => {
-                    if (retries > this.maxRetries) {
-                        this.logger.error('Max retries reached. Giving up on Redis connection.');
-                        return new Error('Max retries reached');
+                    if (retries > this.maxReconnectAttempts) {
+                        this.logger.error(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`);
+                        return new Error('Max reconnection attempts reached');
                     }
-                    return Math.min(retries * this.retryDelay, 3000);
-                }
-            }
+                    const delay = Math.min(retries * 2000, 10000); // Exponential backoff up to 10s
+                    this.logger.log(`Retrying Redis connection. Attempt ${retries}. Delay: ${delay}ms`);
+                    return delay;
+                },
+                connectTimeout: 20000, // 20 seconds
+                keepAlive: 60000, // 60 seconds
+                noDelay: true
+            },
+            disableOfflineQueue: false,
+            readonly: false,
+            legacyMode: false
         });
 
-        this.client.on('error', (err) => {
-            this.logger.error('Redis Client Error', err);
+        this.setupEventHandlers();
+        this.startHealthCheck();
+    }
+
+    private setupEventHandlers() {
+        this.client.on('error', async (err) => {
+            this.logger.error('Redis Client Error:', err);
             this.isConnected = false;
+            this.reconnectAttempts++;
+            
+            if (err.message.includes('ECONNRESET') || err.message.includes('Connection lost')) {
+                this.logger.warn('Connection reset or lost, waiting before reconnect...');
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before reconnect
+                await this.reconnect();
+            }
         });
 
         this.client.on('connect', () => {
             this.logger.log('Redis Client Connected');
             this.isConnected = true;
+            this.reconnectAttempts = 0;
+            this.lastOperationTime = Date.now();
+            this.processOperationQueue();
         });
+
+        this.client.on('ready', () => {
+            this.logger.log('Redis Client Ready');
+            this.isConnected = true;
+            this.reconnectAttempts = 0;
+            this.lastOperationTime = Date.now();
+            this.processOperationQueue();
+        });
+
+        this.client.on('end', () => {
+            this.logger.log('Redis Client Connection Ended');
+            this.isConnected = false;
+        });
+
+        this.client.on('reconnecting', () => {
+            this.logger.warn('Redis Client Reconnecting...');
+        });
+    }
+
+    private async processOperationQueue() {
+        if (this.isProcessingQueue || this.operationQueue.length === 0) {
+            return;
+        }
+
+        this.isProcessingQueue = true;
+        while (this.operationQueue.length > 0 && this.isConnected) {
+            const operation = this.operationQueue.shift();
+            try {
+                await operation();
+            } catch (error) {
+                this.logger.error('Error processing operation from queue:', error);
+                // Add the operation back to the queue if it's a connection error
+                if (error.message.includes('ECONNRESET')) {
+                    this.operationQueue.unshift(operation);
+                    break;
+                }
+            }
+        }
+        this.isProcessingQueue = false;
+    }
+
+    private startHealthCheck() {
+        this.healthCheckInterval = setInterval(async () => {
+            try {
+                const now = Date.now();
+                if (now - this.lastOperationTime > this.maxIdleTime) {
+                    this.logger.warn('Connection idle for too long, performing health check...');
+                    await this.client.ping();
+                    this.lastOperationTime = Date.now();
+                    this.logger.debug('Idle connection health check passed');
+                } else {
+                    await this.client.ping();
+                    this.logger.debug('Redis health check passed');
+                }
+            } catch (error) {
+                this.logger.error('Redis health check failed:', error);
+                await this.reconnect();
+            }
+        }, this.healthCheckIntervalMs);
+    }
+
+    private async reconnect() {
+        try {
+            this.logger.log('Attempting to reconnect to Redis...');
+            if (this.client.isOpen) {
+                await this.client.disconnect();
+            }
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before reconnect
+            await this.client.connect();
+            await this.client.ping();
+            this.logger.log('Redis reconnected successfully');
+            this.lastOperationTime = Date.now();
+        } catch (error) {
+            this.logger.error('Failed to reconnect to Redis:', error);
+            await this.createNewClient();
+        }
+    }
+
+    private async createNewClient() {
+        try {
+            const redisUrl = this.configService.get('REDIS_URL');
+            this.client = createClient({
+                url: redisUrl,
+                socket: {
+                    reconnectStrategy: (retries) => {
+                        if (retries > this.maxReconnectAttempts) {
+                            return new Error('Max reconnection attempts reached');
+                        }
+                        return Math.min(retries * 2000, 10000);
+                    },
+                    connectTimeout: 10000,
+                    keepAlive: 30000,
+                    noDelay: true
+                },
+                disableOfflineQueue: false,
+                readonly: false,
+                legacyMode: false
+            });
+            this.setupEventHandlers();
+            await this.client.connect();
+            this.logger.log('New Redis client created and connected');
+        } catch (error) {
+            this.logger.error('Failed to create new Redis client:', error);
+        }
     }
 
     async onModuleInit() {
         try {
-            if (!this.isConnected) {
-                await this.client.connect();
-            }
+            await this.client.connect();
+            await this.client.ping();
+            this.logger.log('Redis connection established during module initialization');
+            this.isConnected = true;
+            this.lastOperationTime = Date.now();
         } catch (error) {
-            this.logger.error('Failed to connect to Redis:', error);
+            this.logger.error('Failed to connect to Redis during initialization:', error);
             this.isConnected = false;
+            await this.createNewClient();
         }
     }
 
     async onModuleDestroy() {
-        if (this.isConnected) {
+        clearInterval(this.healthCheckInterval);
+        if (this.client && this.client.isOpen) {
             await this.client.quit();
+            this.logger.log('Redis connection closed during module destruction');
         }
     }
 
     private async ensureConnection() {
-        if (!this.isConnected) {
+        if (!this.isConnected || !this.client.isOpen) {
             try {
-                await this.client.connect();
+                if (!this.client.isOpen) {
+                    await this.client.connect();
+                }
+                await this.client.ping();
                 this.isConnected = true;
+                this.lastOperationTime = Date.now();
+                this.logger.log('Redis connection re-established');
             } catch (error) {
                 this.logger.error('Failed to reconnect to Redis:', error);
+                await this.createNewClient();
                 return false;
             }
         }
         return true;
     }
 
-    async get(key: string): Promise<any> {
-        try {
-            if (!await this.ensureConnection()) return null;
-            const value = await this.client.get(key);
-            return value && typeof value === 'string' ? JSON.parse(value) : null;
-        } catch (error) {
-            this.logger.error(`Error getting key ${key}:`, error);
-            return null;
+    private async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                if (!await this.ensureConnection()) {
+                    throw new Error('Failed to ensure connection');
+                }
+                const result = await operation();
+                this.lastOperationTime = Date.now();
+                return result;
+            } catch (error) {
+                lastError = error;
+                this.logger.error(`Operation failed (attempt ${i + 1}/${maxRetries}):`, error);
+                if (i < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                    await this.reconnect();
+                }
+            }
         }
+
+        throw lastError || new Error('Operation failed after all retries');
+    }
+
+    async get(key: string): Promise<any> {
+        return this.executeWithRetry(async () => {
+            const value = await this.client.get(key);
+            return value ? JSON.parse(value) : null;
+        });
     }
 
     async set(key: string, value: any, ttl?: number): Promise<void> {
-        try {
-            if (!await this.ensureConnection()) return;
+        await this.executeWithRetry(async () => {
             const serializedValue = JSON.stringify(value);
             if (ttl) {
                 await this.client.set(key, serializedValue, { EX: ttl });
             } else {
                 await this.client.set(key, serializedValue);
             }
-        } catch (error) {
-            this.logger.error(`Error setting key ${key}:`, error);
-        }
+        });
     }
 
     async del(key: string): Promise<void> {
-        try {
-            if (!await this.ensureConnection()) return;
+        await this.executeWithRetry(async () => {
             await this.client.del(key);
-        } catch (error) {
-            this.logger.error(`Failed to delete key ${key}:`, error);
-        }
+        });
     }
 
     async exists(key: string): Promise<boolean> {
-        try {
-            if (!await this.ensureConnection()) return false;
+        return this.executeWithRetry(async () => {
             const result = await this.client.exists(key);
             return result === 1;
-        } catch (error) {
-            this.logger.error(`Failed to check existence of key ${key}:`, error);
-            return false;
-        }
+        });
     }
 
     // Cache product data
@@ -144,19 +301,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     // Cache category data
     async cacheCategory(categoryId: string, categoryData: any, ttl: number = 3600): Promise<void> {
-        await this.set(`category:${categoryId}`, JSON.stringify(categoryData), ttl);
+        await this.set(`category:${categoryId}`, categoryData, ttl);
     }
 
     async getCachedCategory(categoryId: string): Promise<any | null> {
-        const data = await this.get(`category:${categoryId}`);
-        return data ? JSON.parse(data) : null;
+        return this.get(`category:${categoryId}`);
     }
 
     // Cache user session
     async cacheUserSession(userId: string, sessionData: any, ttl: number = 86400): Promise<void> {
         try {
             await this.ensureConnection();
-            await this.set(`session:${userId}`, JSON.stringify(sessionData), ttl);
+            await this.set(`session:${userId}`, sessionData, ttl);
         } catch (error) {
             this.logger.error(`Failed to cache user session for ${userId}:`, error);
         }
@@ -165,8 +321,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     async getCachedUserSession(userId: string): Promise<any | null> {
         try {
             await this.ensureConnection();
-            const data = await this.get(`session:${userId}`);
-            return data ? JSON.parse(data) : null;
+            return await this.get(`session:${userId}`);
         } catch (error) {
             this.logger.error(`Failed to get cached user session for ${userId}:`, error);
             return null;
@@ -175,17 +330,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     // Cache dashboard data
     async cacheDashboardData(data: any, ttl: number = 300): Promise<void> {
-        await this.set('dashboard:data', JSON.stringify(data), ttl);
+        await this.set('dashboard:data', data, ttl);
     }
 
     async getCachedDashboardData(): Promise<any | null> {
-        const data = await this.get('dashboard:data');
-        return data ? JSON.parse(data) : null;
+        return this.get('dashboard:data');
     }
 
     // Cache product list
     async cacheProductList(products: any[], ttl: number = 300): Promise<void> {
-        await this.set('product_list', JSON.stringify(products), ttl);
+        await this.set('product_list', products, ttl);
     }
 
     async getCachedProductList(): Promise<any> {
@@ -194,12 +348,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     // Cache category list
     async cacheCategoryList(categories: any[], ttl: number = 3600): Promise<void> {
-        await this.set('categories:list', JSON.stringify(categories), ttl);
+        await this.set('categories:list', categories, ttl);
     }
 
     async getCachedCategoryList(): Promise<any[] | null> {
-        const data = await this.get('categories:list');
-        return data ? JSON.parse(data) : null;
+        return this.get('categories:list');
     }
 
     async invalidateCategoryCache(categoryId?: string): Promise<void> {

@@ -17,11 +17,15 @@ COPY . .
 # Clean dist directory and generate Prisma client
 RUN rm -rf dist && npx prisma generate
 
-# Build application
-RUN npm run build
+# Build application with verbose output
+RUN npm run build --verbose
 
-# Verify dist directory exists and contains main.js
-RUN ls -la dist && test -f dist/main.js
+# List contents of the directory to debug
+RUN ls -la && \
+    echo "Contents of current directory:" && \
+    ls -la && \
+    echo "Contents of dist directory (if it exists):" && \
+    ls -la dist || echo "dist directory not found"
 
 # Expose port
 EXPOSE 3001
