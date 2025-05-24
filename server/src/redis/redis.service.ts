@@ -34,10 +34,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                 },
                 connectTimeout: 20000, // 20 seconds
                 noDelay: true
-            },
-            disableOfflineQueue: false,
-            readonly: false,
-            legacyMode: false
+            }
         });
 
         this.setupEventHandlers();
@@ -156,10 +153,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                     },
                     connectTimeout: 20000,
                     noDelay: true
-                },
-                disableOfflineQueue: false,
-                readonly: false,
-                legacyMode: false
+                }
             });
             this.setupEventHandlers();
             await this.client.connect();
