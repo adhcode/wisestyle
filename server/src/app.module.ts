@@ -20,6 +20,19 @@ import { PaymentModule } from './payment/payment.module';
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
+            cache: true,
+            envFilePath: ['.env'],
+            expandVariables: true,
+            validate: (config: Record<string, any>) => {
+                const requiredVars = ['JWT_SECRET', 'REDIS_URL'];
+                const missingVars = requiredVars.filter(key => !config[key]);
+                
+                if (missingVars.length > 0) {
+                    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+                }
+                
+                return config;
+            },
         }),
         AuthModule,
         PrismaModule,
