@@ -57,10 +57,7 @@ async function bootstrap() {
 
   // CORS configuration
   app.enableCors({
-    origin: [
-      configService.get('FRONTEND_URL'),
-      'http://localhost:3000', // Development frontend
-    ],
+    origin: process.env.FRONTEND_URL || 'https://wisestyle.vercel.app',
     credentials: true,
   });
 
@@ -74,10 +71,14 @@ async function bootstrap() {
     });
   });
 
-  // Get port from environment or use default
+  // Get port from environment variable or use default
   const port = process.env.PORT || 3001;
   
-  await app.listen(port);
-  logger.log(`Application is running on: ${await app.getUrl()}`);
+  await app.listen(port, '0.0.0.0', () => {
+    logger.log(`Application is running on port ${port}`);
+    logger.log(`Environment: ${process.env.NODE_ENV}`);
+    logger.log(`Database URL configured: ${!!process.env.DATABASE_URL}`);
+    logger.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
+  });
 }
 bootstrap(); 

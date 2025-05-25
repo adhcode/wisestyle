@@ -16,12 +16,14 @@ RUN npm cache clean --force && \
 COPY . .
 
 # Create a .env file with default values (these will be overridden by Render's environment variables)
-RUN echo "JWT_SECRET=${JWT_SECRET:-default_jwt_secret}" > .env && \
-    echo "REDIS_URL=${REDIS_URL:-redis://localhost:6379}" >> .env && \
-    echo "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/wisestyle?schema=public}" >> .env
+RUN echo "PORT=3001" > .env && \
+    echo "DATABASE_URL=${DATABASE_URL}" >> .env && \
+    echo "REDIS_URL=${REDIS_URL}" >> .env && \
+    echo "JWT_SECRET=${JWT_SECRET:-default_jwt_secret}" >> .env && \
+    echo "NODE_ENV=production" >> .env
 
-# Clean dist directory and generate Prisma client
-RUN rm -rf dist && npx prisma generate
+# Generate Prisma client
+RUN npx prisma generate
 
 # Build the application
 RUN npm run build

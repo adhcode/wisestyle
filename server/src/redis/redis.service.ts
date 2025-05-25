@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
+import { RedisClientType } from '@redis/client';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -17,7 +18,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     private isProcessingQueue: boolean = false;
 
     constructor(private configService: ConfigService) {
-        const redisUrl = this.configService.get('REDIS_URL');
+        const redisUrl = this.configService.get<string>('REDIS_URL');
         this.logger.log(`Initializing Redis with URL: ${redisUrl}`);
 
         this.client = createClient({
@@ -25,7 +26,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             socket: {
                 reconnectStrategy: (retries) => {
                     if (retries > this.maxReconnectAttempts) {
-                        this.logger.error(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`);
+                        this.logger.error('Max reconnection attempts reached');
                         return new Error('Max reconnection attempts reached');
                     }
                     const delay = Math.min(retries * 2000, 10000); // Exponential backoff up to 10s
@@ -141,7 +142,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     private async createNewClient() {
         try {
-            const redisUrl = this.configService.get('REDIS_URL');
+            const redisUrl = this.configService.get<string>('REDIS_URL');
             this.client = createClient({
                 url: redisUrl,
                 socket: {
@@ -246,7 +247,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         await this.executeWithRetry(async () => {
             const serializedValue = JSON.stringify(value);
             if (ttl) {
-                await this.client.set(key, serializedValue, { EX: ttl });
+                await this.client.setEx(key, ttl, serializedValue);
             } else {
                 await this.client.set(key, serializedValue);
             }
