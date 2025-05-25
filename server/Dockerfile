@@ -17,7 +17,8 @@ COPY . .
 
 # Create a .env file with default values (these will be overridden by Render's environment variables)
 RUN echo "JWT_SECRET=${JWT_SECRET:-default_jwt_secret}" > .env && \
-    echo "REDIS_URL=${REDIS_URL:-redis://localhost:6379}" >> .env
+    echo "REDIS_URL=${REDIS_URL:-redis://localhost:6379}" >> .env && \
+    echo "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/wisestyle?schema=public}" >> .env
 
 # Clean dist directory and generate Prisma client
 RUN rm -rf dist && npx prisma generate
