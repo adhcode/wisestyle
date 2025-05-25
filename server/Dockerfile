@@ -15,28 +15,19 @@ RUN npm cache clean --force && \
 # Copy source code
 COPY . .
 
-# Create a .env file with default values (these will be overridden by Render's environment variables)
-RUN echo "PORT=3001" > .env && \
-    echo "DATABASE_URL=${DATABASE_URL}" >> .env && \
-    echo "REDIS_URL=${REDIS_URL}" >> .env && \
-    echo "JWT_SECRET=${JWT_SECRET:-default_jwt_secret}" >> .env && \
-    echo "NODE_ENV=production" >> .env
-
 # Generate Prisma client
 RUN npx prisma generate
 
 # Build the application
 RUN npm run build
 
-# List contents of the directory to debug
-RUN ls -la && \
-    echo "Contents of current directory:" && \
-    ls -la && \
-    echo "Contents of dist directory (if it exists):" && \
-    ls -la dist || echo "dist directory not found"
-
 # Expose the port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "run", "start:prod"] 
+# Start the application with environment variables
+CMD DATABASE_URL=${DATABASE_URL} \
+    REDIS_URL=${REDIS_URL} \
+    JWT_SECRET=${JWT_SECRET} \
+    PORT=${PORT:-3001} \
+    NODE_ENV=${NODE_ENV:-production} \
+    npm run start:prod 

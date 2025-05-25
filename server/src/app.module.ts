@@ -22,14 +22,22 @@ import * as Joi from 'joi';
         ConfigModule.forRoot({
             isGlobal: true,
             validationSchema: Joi.object({
-                JWT_SECRET: Joi.string().default('default_jwt_secret'),
-                REDIS_URL: Joi.string().default('redis://localhost:6379'),
+                NODE_ENV: Joi.string()
+                    .valid('development', 'production', 'test')
+                    .default('development'),
+                PORT: Joi.number().default(3001),
                 DATABASE_URL: Joi.string().required(),
+                REDIS_URL: Joi.string().required(),
+                JWT_SECRET: Joi.string().default('default_jwt_secret'),
+                JWT_EXPIRATION: Joi.string().default('24h'),
+                FRONTEND_URL: Joi.string().default('https://wisestyle.vercel.app'),
             }),
             validationOptions: {
                 allowUnknown: true,
                 abortEarly: false,
             },
+            expandVariables: true,
+            cache: true,
         }),
         AuthModule,
         PrismaModule,
