@@ -24,17 +24,9 @@ RUN npm run build
 # Expose the port
 EXPOSE 3001
 
-# Create startup script
-RUN echo '#!/bin/sh\n\
-    echo "Environment variables:"\n\
-    echo "DATABASE_URL=$DATABASE_URL"\n\
-    echo "REDIS_URL=$REDIS_URL"\n\
-    echo "JWT_SECRET=$JWT_SECRET"\n\
-    echo "PORT=$PORT"\n\
-    echo "NODE_ENV=$NODE_ENV"\n\
-    \n\
-    exec npm run start:prod' > /usr/src/app/start.sh && \
-    chmod +x /usr/src/app/start.sh
+# Create start script
+RUN printf '#!/bin/sh\necho "Environment variables:"\necho "DATABASE_URL=${DATABASE_URL}"\necho "REDIS_URL=${REDIS_URL}"\necho "JWT_SECRET=${JWT_SECRET}"\necho "PORT=${PORT}"\necho "NODE_ENV=${NODE_ENV}"\n\nnpm run start:prod\n' > start.sh && \
+    chmod +x start.sh
 
 # Start the application
-CMD ["/usr/src/app/start.sh"] 
+CMD ["./start.sh"] 
