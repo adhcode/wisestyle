@@ -21,6 +21,14 @@ import * as Joi from 'joi';
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
+            envFilePath: '.env',
+            load: [() => ({
+                DATABASE_URL: process.env.DATABASE_URL,
+                REDIS_URL: process.env.REDIS_URL,
+                JWT_SECRET: process.env.JWT_SECRET,
+                PORT: process.env.PORT || 3001,
+                NODE_ENV: process.env.NODE_ENV || 'development',
+            })],
             validationSchema: Joi.object({
                 NODE_ENV: Joi.string()
                     .valid('development', 'production', 'test')
@@ -36,8 +44,6 @@ import * as Joi from 'joi';
                 allowUnknown: true,
                 abortEarly: false,
             },
-            expandVariables: true,
-            cache: true,
         }),
         AuthModule,
         PrismaModule,
@@ -74,11 +80,18 @@ export class AppModule implements NestModule, OnModuleInit {
     }
 
     async onModuleInit() {
-        this.logger.log('Checking environment variables...');
+        this.logger.log('Environment variables:');
+        this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+        this.logger.log(`DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
+        this.logger.log(`REDIS_URL exists: ${!!process.env.REDIS_URL}`);
+        this.logger.log(`JWT_SECRET exists: ${!!process.env.JWT_SECRET}`);
+        this.logger.log(`PORT: ${process.env.PORT}`);
+
+        this.logger.log('ConfigService values:');
         this.logger.log(`NODE_ENV: ${this.configService.get('NODE_ENV')}`);
-        this.logger.log(`DATABASE_URL configured: ${!!this.configService.get('DATABASE_URL')}`);
-        this.logger.log(`REDIS_URL configured: ${!!this.configService.get('REDIS_URL')}`);
-        this.logger.log(`JWT_SECRET configured: ${!!this.configService.get('JWT_SECRET')}`);
+        this.logger.log(`DATABASE_URL exists: ${!!this.configService.get('DATABASE_URL')}`);
+        this.logger.log(`REDIS_URL exists: ${!!this.configService.get('REDIS_URL')}`);
+        this.logger.log(`JWT_SECRET exists: ${!!this.configService.get('JWT_SECRET')}`);
         this.logger.log(`PORT: ${this.configService.get('PORT')}`);
     }
 }

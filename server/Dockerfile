@@ -25,7 +25,22 @@ RUN npm run build
 EXPOSE 3001
 
 # Create start script
-RUN printf '#!/bin/sh\necho "Environment variables:"\necho "DATABASE_URL=${DATABASE_URL}"\necho "REDIS_URL=${REDIS_URL}"\necho "JWT_SECRET=${JWT_SECRET}"\necho "PORT=${PORT}"\necho "NODE_ENV=${NODE_ENV}"\n\nnpm run start:prod\n' > start.sh && \
+RUN printf '#!/bin/sh\n\
+    # Create .env file with environment variables\n\
+    cat > .env << EOL\n\
+    DATABASE_URL="${DATABASE_URL}"\n\
+    REDIS_URL="${REDIS_URL}"\n\
+    JWT_SECRET="${JWT_SECRET}"\n\
+    PORT="${PORT:-3001}"\n\
+    NODE_ENV="${NODE_ENV:-production}"\n\
+    EOL\n\
+    \n\
+    # Print environment variables\n\
+    echo "Content of .env file:"\n\
+    cat .env\n\
+    \n\
+    # Start the application\n\
+    npm run start:prod\n' > start.sh && \
     chmod +x start.sh
 
 # Start the application
