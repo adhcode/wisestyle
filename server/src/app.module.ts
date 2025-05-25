@@ -1,5 +1,5 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module, NestModule, MiddlewareConsumer, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -28,7 +28,7 @@ import * as Joi from 'joi';
                 PORT: Joi.number().default(3001),
                 DATABASE_URL: Joi.string().required(),
                 REDIS_URL: Joi.string().required(),
-                JWT_SECRET: Joi.string().default('default_jwt_secret'),
+                JWT_SECRET: Joi.string().required(),
                 JWT_EXPIRATION: Joi.string().default('24h'),
                 FRONTEND_URL: Joi.string().default('https://wisestyle.vercel.app'),
             }),
@@ -62,10 +62,23 @@ import * as Joi from 'joi';
         },
     ],
 })
-export class AppModule implements NestModule {
+export class AppModule implements NestModule, OnModuleInit {
+    private readonly logger = new Logger(AppModule.name);
+
+    constructor(private configService: ConfigService) {}
+
     configure(consumer: MiddlewareConsumer) {
         consumer
             .apply(CacheHeadersMiddleware)
             .forRoutes('*');
+    }
+
+    async onModuleInit() {
+        this.logger.log('Checking environment variables...');
+        this.logger.log(`NODE_ENV: ${this.configService.get('NODE_ENV')}`);
+        this.logger.log(`DATABASE_URL configured: ${!!this.configService.get('DATABASE_URL')}`);
+        this.logger.log(`REDIS_URL configured: ${!!this.configService.get('REDIS_URL')}`);
+        this.logger.log(`JWT_SECRET configured: ${!!this.configService.get('JWT_SECRET')}`);
+        this.logger.log(`PORT: ${this.configService.get('PORT')}`);
     }
 }
