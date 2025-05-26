@@ -24,7 +24,7 @@ RUN npm run build
 # Expose the port
 EXPOSE 3001
 
-# Create start script
+# Create start script with health check
 RUN printf '#!/bin/sh\n\
     # Create .env file with environment variables\n\
     cat > .env << EOL\n\
@@ -39,9 +39,16 @@ RUN printf '#!/bin/sh\n\
     echo "Content of .env file:"\n\
     cat .env\n\
     \n\
-    # Start the application\n\
-    npm run start:prod\n' > start.sh && \
+    # Start the application with a timeout\n\
+    timeout 30s npm run start:prod || {\n\
+    echo "Application failed to start within 30 seconds"\n\
+    exit 1\n\
+    }\n' > start.sh && \
     chmod +x start.sh
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
 
 # Start the application
 CMD ["./start.sh"] 
