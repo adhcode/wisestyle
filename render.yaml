@@ -4,10 +4,15 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: cd server && npm install --legacy-peer-deps && npm run build
+    buildCommand: |
+      cd server
+      npm install --legacy-peer-deps
+      npm run build
     startCommand: cd server && npm run start:prod
     healthCheckPath: /health
     autoDeploy: true
+    deployHook: ${DEPLOY_HOOK}
+    numInstances: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -21,13 +26,13 @@ services:
         value: "3001"
       - key: NODE_ENV
         value: "production"
-    scaling:
-      minInstances: 1
-      maxInstances: 1
-    disk:
-      name: wisestyle-data
-      mountPath: /data
-      sizeGB: 1
+    buildFilter:
+      paths:
+        - server/**
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /server
 
 databases:
   - name: wisestyle-db
