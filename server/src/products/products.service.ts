@@ -4,6 +4,7 @@ import { Prisma, DisplaySection } from '@prisma/client';
 import { CreateProductDto, UpdateProductDto } from './dto';
 import { RedisService } from '../redis/redis.service';
 import { Logger } from '@nestjs/common';
+import { Product, HomepageSection } from './types';
 
 @Injectable()
 export class ProductsService {
@@ -516,24 +517,24 @@ export class ProductsService {
     });
   }
 
-  async getFeaturedProducts(): Promise<Product[]> {
+  async getFeatured(): Promise<Product[]> {
     const cachedProducts = await this.redisService.get<Product[]>('featured_products');
     if (cachedProducts) {
-        return cachedProducts;
+      return cachedProducts;
     }
 
     // Get featured products (new arrivals and limited edition items)
     const products = await this.prisma.product.findMany({
-        where: {
-            OR: [
-                { isNewArrival: true },
-                { isLimitedEdition: true }
-            ]
-        },
-        include: {
-            images: true,
-            category: true
-        }
+      where: {
+        OR: [
+          { displaySection: DisplaySection.NEW_ARRIVAL },
+          { isLimited: true }
+        ]
+      },
+      include: {
+        images: true,
+        category: true
+      }
     });
 
     // Cache the results for 1 hour
@@ -543,71 +544,71 @@ export class ProductsService {
 
   async findSimilar(slug: string) {
     try {
-        // Get the product to get its category
-        const product = await this.findBySlug(slug);
-        if (!product) {
-            throw new NotFoundException(`Product with slug ${slug} not found`);
-        }
+      // Get the product to get its category
+      const product = await this.findBySlug(slug);
+      if (!product) {
+        throw new NotFoundException(`Product with slug ${slug} not found`);
+      }
 
-        // Get similar products from the same category
-        return this.prisma.product.findMany({
-            where: {
-                categoryId: product.categoryId,
-                id: { not: product.id }
-            },
+      // Get similar products from the same category
+      return this.prisma.product.findMany({
+        where: {
+          categoryId: product.categoryId,
+          id: { not: product.id }
+        },
+        include: {
+          category: true,
+          sizes: true,
+          colors: true,
+          images: true,
+          inventory: {
             include: {
-                category: true,
-                sizes: true,
-                colors: true,
-                images: true,
-                inventory: {
-                    include: {
-                        size: true,
-                        color: true
-                    }
-                }
-            },
-            take: 4
-        });
+              size: true,
+              color: true
+            }
+          }
+        },
+        take: 4
+      });
     } catch (error) {
-        if (error instanceof NotFoundException) {
-            throw error;
-        }
-        throw new BadRequestException('Error fetching similar products');
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Error fetching similar products');
     }
   }
 
   async getHomepageSections(): Promise<HomepageSection[]> {
     const cachedSections = await this.redisService.get<HomepageSection[]>('homepage_sections');
     if (cachedSections) {
-        return cachedSections;
+      return cachedSections;
     }
 
     // Get products from database
     const products = await this.prisma.product.findMany({
-        include: {
-            images: true,
-            category: true
-        }
+      include: {
+        images: true,
+        category: true
+      }
     });
 
     // Create sections
     const sections: HomepageSection[] = [
-        {
-            id: 'new-arrivals',
-            title: 'New Arrivals',
-            products: products.filter(p => p.isNewArrival)
-        },
-        {
-            id: 'limited-edition',
-            title: 'Limited Edition',
-            products: products.filter(p => p.isLimitedEdition)
-        },
-        {
-            id: 'best-sellers',
-            title: 'Best Sellers',
-            products: products.filter(p => p.isBestSeller)
-        }
+      {
+        id: 'new-arrivals',
+        title: 'New Arrivals',
+        products: products.filter(p => p.displaySection === DisplaySection.NEW_ARRIVAL)
+      },
+      {
+        id: 'limited-edition',
+        title: 'Limited Edition',
+        products: products.filter(p => p.isLimited)
+      },
+      {
+        id: 'best-sellers',
+        title: 'Best Sellers',
+        products: products.filter(p => p.displaySection === DisplaySection.TRENDING)
+      }
     ];
 
     // Cache the results for 1 hour
