@@ -516,37 +516,28 @@ export class ProductsService {
     });
   }
 
-  async getFeatured() {
-    // Try to get from cache first
-    const cachedProducts = await this.redisService.get('featured_products');
+  async getFeaturedProducts(): Promise<Product[]> {
+    const cachedProducts = await this.redisService.get<Product[]>('featured_products');
     if (cachedProducts) {
-      return JSON.parse(cachedProducts);
+        return cachedProducts;
     }
 
     // Get featured products (new arrivals and limited edition items)
     const products = await this.prisma.product.findMany({
-      where: {
-        OR: [
-          { displaySection: DisplaySection.NEW_ARRIVAL },
-          { isLimited: true },
-        ],
-      },
-      include: {
-        category: true,
-        sizes: true,
-        colors: true,
-        images: true,
-        inventory: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 8,
+        where: {
+            OR: [
+                { isNewArrival: true },
+                { isLimitedEdition: true }
+            ]
+        },
+        include: {
+            images: true,
+            category: true
+        }
     });
 
-    // Cache the results
-    await this.redisService.set('featured_products', JSON.stringify(products), 3600); // Cache for 1 hour
-
+    // Cache the results for 1 hour
+    await this.redisService.set('featured_products', products, 3600);
     return products;
   }
 
@@ -586,57 +577,42 @@ export class ProductsService {
     }
   }
 
-  async getHomepageSections() {
-    try {
-      // Try to get from cache first
-      const cachedSections = await this.redisService.get('homepage_sections');
-      if (cachedSections) {
-        return JSON.parse(cachedSections);
-      }
-
-      // Get products from database
-      const products = await this.prisma.product.findMany({
-        where: {
-          displaySection: { not: 'NONE' }
-        },
-        include: {
-          category: true,
-          sizes: true,
-          colors: true,
-          images: true,
-          inventory: {
-            include: {
-              size: true,
-              color: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
-
-      // Group products by section
-      const grouped = {
-        NEW_ARRIVALS: [],
-        WORK_WEEKEND: [],
-        EFFORTLESS: []
-      };
-
-      for (const product of products) {
-        if (grouped[product.displaySection]) {
-          grouped[product.displaySection].push(product);
-        }
-      }
-
-      // Cache the grouped sections
-      await this.redisService.set('homepage_sections', JSON.stringify(grouped), 3600); // Cache for 1 hour
-
-      return grouped;
-    } catch (error) {
-      this.logger.error('Error fetching homepage sections:', error);
-      throw new BadRequestException('Error fetching homepage sections');
+  async getHomepageSections(): Promise<HomepageSection[]> {
+    const cachedSections = await this.redisService.get<HomepageSection[]>('homepage_sections');
+    if (cachedSections) {
+        return cachedSections;
     }
+
+    // Get products from database
+    const products = await this.prisma.product.findMany({
+        include: {
+            images: true,
+            category: true
+        }
+    });
+
+    // Create sections
+    const sections: HomepageSection[] = [
+        {
+            id: 'new-arrivals',
+            title: 'New Arrivals',
+            products: products.filter(p => p.isNewArrival)
+        },
+        {
+            id: 'limited-edition',
+            title: 'Limited Edition',
+            products: products.filter(p => p.isLimitedEdition)
+        },
+        {
+            id: 'best-sellers',
+            title: 'Best Sellers',
+            products: products.filter(p => p.isBestSeller)
+        }
+    ];
+
+    // Cache the results for 1 hour
+    await this.redisService.set('homepage_sections', sections, 3600);
+    return sections;
   }
 
   async getRelatedProducts(productId: string, limit = 4) {
