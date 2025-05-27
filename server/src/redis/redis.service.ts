@@ -1,15 +1,15 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient } from 'redis';
-import { RedisClientType } from '@redis/client';
+import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-    private client: RedisClientType;
-    private isConnected: boolean = false;
     private readonly logger = new Logger(RedisService.name);
-    private reconnectAttempts: number = 0;
-    private readonly maxReconnectAttempts: number = 5;
+    private client: RedisClientType;
+    private isConnected = false;
+    private reconnectAttempts = 0;
+    private readonly maxReconnectAttempts = 5;
+    private readonly reconnectDelay = 5000; // 5 seconds
     private healthCheckInterval: NodeJS.Timeout;
     private readonly healthCheckIntervalMs: number = 30000; // 30 seconds
     private lastOperationTime: number = Date.now();
@@ -18,24 +18,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     private isProcessingQueue: boolean = false;
 
     constructor(private configService: ConfigService) {
-        const redisUrl = this.configService.get<string>('REDIS_URL');
-        this.logger.log(`Initializing Redis with URL: ${redisUrl}`);
-
         this.client = createClient({
-            url: redisUrl,
+            url: this.configService.get<string>('REDIS_URL'),
             socket: {
                 reconnectStrategy: (retries) => {
                     if (retries > this.maxReconnectAttempts) {
                         this.logger.error('Max reconnection attempts reached');
                         return new Error('Max reconnection attempts reached');
                     }
-                    const delay = Math.min(retries * 2000, 10000); // Exponential backoff up to 10s
-                    this.logger.log(`Retrying Redis connection. Attempt ${retries}. Delay: ${delay}ms`);
-                    return delay;
+                    this.reconnectAttempts = retries;
+                    return Math.min(retries * this.reconnectDelay, 30000);
                 },
-                connectTimeout: 20000, // 20 seconds
-                noDelay: true
-            }
+                connectTimeout: 10000,
+                keepAlive: 5000,
+            },
         });
 
         this.setupEventHandlers();
@@ -43,41 +39,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     private setupEventHandlers() {
-        this.client.on('error', async (err) => {
-            this.logger.error('Redis Client Error:', err);
-            this.isConnected = false;
-            this.reconnectAttempts++;
-            
-            if (err.message.includes('ECONNRESET') || err.message.includes('Connection lost')) {
-                this.logger.warn('Connection reset or lost, waiting before reconnect...');
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before reconnect
-                await this.reconnect();
-            }
-        });
-
         this.client.on('connect', () => {
-            this.logger.log('Redis Client Connected');
+            this.logger.log('Redis client connected');
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            this.lastOperationTime = Date.now();
-            this.processOperationQueue();
         });
 
-        this.client.on('ready', () => {
-            this.logger.log('Redis Client Ready');
-            this.isConnected = true;
-            this.reconnectAttempts = 0;
-            this.lastOperationTime = Date.now();
-            this.processOperationQueue();
-        });
-
-        this.client.on('end', () => {
-            this.logger.log('Redis Client Connection Ended');
+        this.client.on('error', (err) => {
+            this.logger.error(`Redis client error: ${err.message}`);
             this.isConnected = false;
         });
 
         this.client.on('reconnecting', () => {
-            this.logger.warn('Redis Client Reconnecting...');
+            this.logger.log(`Redis client reconnecting... Attempt ${this.reconnectAttempts + 1}`);
+        });
+
+        this.client.on('end', () => {
+            this.logger.log('Redis client connection ended');
+            this.isConnected = false;
         });
     }
 
@@ -150,10 +129,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                         if (retries > this.maxReconnectAttempts) {
                             return new Error('Max reconnection attempts reached');
                         }
-                        return Math.min(retries * 2000, 10000);
+                        return Math.min(retries * this.reconnectDelay, 30000);
                     },
-                    connectTimeout: 20000,
-                    noDelay: true
+                    connectTimeout: 10000,
+                    keepAlive: 5000,
                 }
             });
             this.setupEventHandlers();
@@ -167,22 +146,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     async onModuleInit() {
         try {
             await this.client.connect();
-            await this.client.ping();
-            this.logger.log('Redis connection established during module initialization');
-            this.isConnected = true;
-            this.lastOperationTime = Date.now();
+            this.logger.log('Redis service initialized');
         } catch (error) {
-            this.logger.error('Failed to connect to Redis during initialization:', error);
-            this.isConnected = false;
-            await this.createNewClient();
+            this.logger.error(`Failed to initialize Redis service: ${error.message}`);
+            throw error;
         }
     }
 
     async onModuleDestroy() {
         clearInterval(this.healthCheckInterval);
-        if (this.client && this.client.isOpen) {
+        try {
             await this.client.quit();
-            this.logger.log('Redis connection closed during module destruction');
+            this.logger.log('Redis service destroyed');
+        } catch (error) {
+            this.logger.error(`Error while destroying Redis service: ${error.message}`);
         }
     }
 
@@ -230,34 +207,34 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         throw lastError || new Error('Operation failed after all retries');
     }
 
-    async get(key: string): Promise<any> {
+    async get<T>(key: string): Promise<T | null> {
         return this.executeWithRetry(async () => {
             const value = await this.client.get(key);
-            if (!value) return null;
-            try {
-                return JSON.parse(value as string);
-            } catch (error) {
-                this.logger.error(`Error parsing Redis value for key ${key}:`, error);
-                return null;
-            }
+            return value ? JSON.parse(value) : null;
         });
     }
 
     async set(key: string, value: any, ttl?: number): Promise<void> {
-        await this.executeWithRetry(async () => {
+        try {
             const serializedValue = JSON.stringify(value);
             if (ttl) {
-                await this.client.setEx(key, ttl, serializedValue);
+                await this.client.set(key, serializedValue, { EX: ttl });
             } else {
                 await this.client.set(key, serializedValue);
             }
-        });
+        } catch (error) {
+            this.logger.error(`Error setting key ${key}: ${error.message}`);
+            throw error;
+        }
     }
 
     async del(key: string): Promise<void> {
-        await this.executeWithRetry(async () => {
+        try {
             await this.client.del(key);
-        });
+        } catch (error) {
+            this.logger.error(`Error deleting key ${key}: ${error.message}`);
+            throw error;
+        }
     }
 
     async exists(key: string): Promise<boolean> {
@@ -363,5 +340,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     async invalidateDashboardCache(): Promise<void> {
         await this.del('dashboard:data');
+    }
+
+    async ping(): Promise<boolean> {
+        try {
+            const result = await this.client.ping();
+            return result === 'PONG';
+        } catch (error) {
+            this.logger.error(`Redis ping failed: ${error.message}`);
+            return false;
+        }
     }
 } 

@@ -26,8 +26,8 @@ EXPOSE 3001
 # Create start script
 RUN echo '#!/bin/sh\n\
     echo "Starting application..."\n\
-    npm run start:prod\n' > start.sh && \
-    chmod +x start.sh
+    exec npm run start:prod\n' > /usr/src/app/start.sh && \
+    chmod +x /usr/src/app/start.sh
 
 # Start the application
-CMD ["./start.sh"] 
+CMD ["/usr/src/app/start.sh"] 
