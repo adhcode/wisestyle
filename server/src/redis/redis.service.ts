@@ -170,7 +170,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             const value = await this.client.get(key);
             if (!value) return null;
             try {
-                return JSON.parse(value) as T;
+                const parsed = JSON.parse(value);
+                return parsed as T;
             } catch (error) {
                 this.logger.error(`Error parsing Redis value for key ${key}:`, error);
                 return null;
