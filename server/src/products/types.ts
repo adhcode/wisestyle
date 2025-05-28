@@ -1,6 +1,6 @@
-import { Product as PrismaProduct, DisplaySection } from '@prisma/client';
+import { Product as PrismaProduct, DisplaySection, ProductStatus } from '@prisma/client';
 
-export interface Product extends Omit<PrismaProduct, 'displaySection'> {
+export type Product = PrismaProduct & {
     category: {
         id: string;
         name: string;
@@ -17,11 +17,10 @@ export interface Product extends Omit<PrismaProduct, 'displaySection'> {
         url: string;
         productId: string;
     }[];
-    displaySection: DisplaySection;
     isNewArrival: boolean;
     isLimitedEdition: boolean;
     isBestSeller: boolean;
-}
+};
 
 export interface HomepageSection {
     id: string;
