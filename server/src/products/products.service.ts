@@ -537,9 +537,17 @@ export class ProductsService {
       }
     });
 
+    // Map to Product interface
+    const mappedProducts = products.map(product => ({
+      ...product,
+      isNewArrival: product.displaySection === DisplaySection.NEW_ARRIVAL,
+      isLimitedEdition: product.isLimited,
+      isBestSeller: product.displaySection === DisplaySection.TRENDING
+    }));
+
     // Cache the results for 1 hour
-    await this.redisService.set('featured_products', products, 3600);
-    return products;
+    await this.redisService.set('featured_products', mappedProducts, 3600);
+    return mappedProducts;
   }
 
   async findSimilar(slug: string) {
@@ -592,22 +600,30 @@ export class ProductsService {
       }
     });
 
+    // Map products to Product interface
+    const mappedProducts = products.map(product => ({
+      ...product,
+      isNewArrival: product.displaySection === DisplaySection.NEW_ARRIVAL,
+      isLimitedEdition: product.isLimited,
+      isBestSeller: product.displaySection === DisplaySection.TRENDING
+    }));
+
     // Create sections
     const sections: HomepageSection[] = [
       {
         id: 'new-arrivals',
         title: 'New Arrivals',
-        products: products.filter(p => p.displaySection === DisplaySection.NEW_ARRIVAL)
+        products: mappedProducts.filter(p => p.displaySection === DisplaySection.NEW_ARRIVAL)
       },
       {
         id: 'limited-edition',
         title: 'Limited Edition',
-        products: products.filter(p => p.isLimited)
+        products: mappedProducts.filter(p => p.isLimited)
       },
       {
         id: 'best-sellers',
         title: 'Best Sellers',
-        products: products.filter(p => p.displaySection === DisplaySection.TRENDING)
+        products: mappedProducts.filter(p => p.displaySection === DisplaySection.TRENDING)
       }
     ];
 
