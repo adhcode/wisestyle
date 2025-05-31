@@ -40,7 +40,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                     return delay;
                 },
                 connectTimeout: 10000,
-                keepAlive: true,
+                keepAlive: 5000,
             },
         });
 
