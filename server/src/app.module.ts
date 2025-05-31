@@ -16,19 +16,30 @@ import { UploadModule } from './upload/upload.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { PaymentModule } from './payment/payment.module';
 import * as Joi from 'joi';
+import { join } from 'path';
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            envFilePath: '.env',
-            load: [() => ({
-                DATABASE_URL: process.env.DATABASE_URL,
-                REDIS_URL: process.env.REDIS_URL,
-                JWT_SECRET: process.env.JWT_SECRET,
-                PORT: process.env.PORT || 3001,
-                NODE_ENV: process.env.NODE_ENV || 'development',
-            })],
+            envFilePath: join(__dirname, '..', '.env'),
+            load: [() => {
+                const env = {
+                    DATABASE_URL: process.env.DATABASE_URL,
+                    REDIS_URL: process.env.REDIS_URL,
+                    JWT_SECRET: process.env.JWT_SECRET,
+                    PORT: process.env.PORT || 3001,
+                    NODE_ENV: process.env.NODE_ENV || 'development',
+                };
+                console.log('Loaded environment variables:', {
+                    DATABASE_URL_exists: !!env.DATABASE_URL,
+                    REDIS_URL_exists: !!env.REDIS_URL,
+                    JWT_SECRET_exists: !!env.JWT_SECRET,
+                    PORT: env.PORT,
+                    NODE_ENV: env.NODE_ENV,
+                });
+                return env;
+            }],
             validationSchema: Joi.object({
                 NODE_ENV: Joi.string()
                     .valid('development', 'production', 'test')
