@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: wisestyle-server
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Render will prompt for this value
+      - key: REDIS_URL
+        sync: false # Render will prompt for this value
+      - key: JWT_SECRET
+        generateValue: true # Render will generate a secure value
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        sync: false # Set this to your frontend URL
+    healthCheckPath: /api/health
+    autoDeploy: true

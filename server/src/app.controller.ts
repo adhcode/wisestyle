@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { Public } from './decorators/public.decorator';
 
 @Controller()
 export class AppController {
@@ -10,7 +11,8 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('health')
+  @Public()
+  @Get('api/health')
   healthCheck() {
     return {
       status: 'ok',
