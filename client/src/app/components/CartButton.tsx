@@ -30,8 +30,8 @@ export default function CartButton({ product, className = '', onSuccess }: CartB
             createdAt: product.createdAt || new Date(),
             updatedAt: product.updatedAt || new Date(),
             quantity: 1,
-            selectedSize: product.sizes?.[0] || 'Default',
-            selectedColor: product.colors?.[0] || 'Default',
+            selectedSize: product.sizes?.[0]?.value || 'Default',
+            selectedColor: product.colors?.[0]?.value || 'Default',
         };
 
         addItem(cartItem);
