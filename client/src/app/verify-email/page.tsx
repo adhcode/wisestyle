@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { AuthService } from '@/services/auth.service';
+import { toast } from 'react-hot-toast';
 
 function VerifyEmailContent() {
     const searchParams = useSearchParams();
@@ -12,25 +12,42 @@ function VerifyEmailContent() {
     const [message, setMessage] = useState('');
 
     useEffect(() => {
-        const token = searchParams.get('token');
-        if (!token) {
-            setStatus('error');
-            setMessage('Invalid verification link');
-            return;
-        }
+        const verifyEmail = async () => {
+            const token = searchParams.get('token');
+            if (!token) {
+                setStatus('error');
+                setMessage('Invalid verification link');
+                return;
+            }
 
-        AuthService.verifyEmail(token)
-            .then(() => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Verification failed');
+                }
+
                 setStatus('success');
                 setMessage('Email verified successfully! You can now log in.');
+                toast.success('Email verified successfully!');
                 setTimeout(() => {
                     router.push('/login');
                 }, 3000);
-            })
-            .catch((error) => {
+            } catch (error: any) {
                 setStatus('error');
                 setMessage(error.message || 'Failed to verify email');
-            });
+                toast.error(error.message || 'Failed to verify email');
+            }
+        };
+
+        verifyEmail();
     }, [searchParams, router]);
 
     return (

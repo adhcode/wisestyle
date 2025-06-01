@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PaymentService } from '@/services/payment.service';
 import { toast } from 'react-hot-toast';
 import { useCart } from '@/contexts/CartContext';
 
@@ -28,30 +27,33 @@ function PaymentVerifyContent() {
 
                 if (transactionId) {
                     // Flutterwave verification
-                    const response = await PaymentService.verifyFlutterwavePayment(transactionId);
-                    if (response.status === 'success') {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify-flutterwave/${transactionId}`);
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
                         handlePaymentSuccess();
                     } else {
-                        throw new Error(response.message);
+                        throw new Error(data.message);
                     }
                 } else if (reference) {
                     // Paystack verification
-                    const response = await PaymentService.verifyPaystackPayment(reference);
-                    if (response.status === 'success') {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify-paystack/${reference}`);
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
                         handlePaymentSuccess();
                     } else {
-                        throw new Error(response.message);
+                        throw new Error(data.message);
                     }
                 } else {
                     throw new Error('No payment reference found');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Payment verification error:', error);
-                toast.error('Failed to verify payment. Please contact support.');
-                router.push('/checkout');
-            } finally {
                 setStatus('error');
                 setMessage(error?.message || 'Failed to verify payment');
+                toast.error('Failed to verify payment. Please contact support.');
+                router.push('/checkout');
             }
         };
 
@@ -60,6 +62,8 @@ function PaymentVerifyContent() {
 
     const handlePaymentSuccess = () => {
         clearCart();
+        setStatus('success');
+        setMessage('Payment verified successfully!');
         toast.success('Payment successful!');
         router.push('/orders');
     };
