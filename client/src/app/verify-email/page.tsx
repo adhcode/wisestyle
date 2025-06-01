@@ -1,78 +1,71 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { AuthService } from '@/services/auth.service';
 
-export default function VerifyEmailPage() {
-    const [isVerifying, setIsVerifying] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+function VerifyEmailContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+    const [message, setMessage] = useState('');
 
     useEffect(() => {
         const token = searchParams.get('token');
         if (!token) {
-            setError('No verification token found');
-            setIsVerifying(false);
+            setStatus('error');
+            setMessage('Invalid verification link');
             return;
         }
 
-        const verify = async () => {
-            try {
-                console.log('Verifying email with token:', token);
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                const data = await response.json();
-                console.log('Verification response:', data);
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Verification failed');
-                }
-
-                toast.success(data.message || 'Email verified successfully');
-                router.push('/sign-in');
-            } catch (err) {
-                console.error('Verification error:', err);
-                setError(err instanceof Error ? err.message : 'Verification failed');
-            } finally {
-                setIsVerifying(false);
-            }
-        };
-
-        verify();
+        AuthService.verifyEmail(token)
+            .then(() => {
+                setStatus('success');
+                setMessage('Email verified successfully! You can now log in.');
+                setTimeout(() => {
+                    router.push('/login');
+                }, 3000);
+            })
+            .catch((error) => {
+                setStatus('error');
+                setMessage(error.message || 'Failed to verify email');
+            });
     }, [searchParams, router]);
 
-    if (isVerifying) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-4">Verifying your email...</h1>
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8">
+                <div>
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Email Verification
+                    </h2>
+                    <div className="mt-4">
+                        {status === 'loading' && (
+                            <div className="flex justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            </div>
+                        )}
+                        {(status === 'success' || status === 'error') && (
+                            <div className={`text-center ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                                {message}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+}
 
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold mb-4 text-red-600">Verification Failed</h1>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <a href="/sign-in" className="text-blue-600 hover:underline">
-                        Return to Sign In
-                    </a>
-                </div>
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
-        );
-    }
-
-    return null; // Will redirect to sign-in on success
+        }>
+            <VerifyEmailContent />
+        </Suspense>
+    );
 } 

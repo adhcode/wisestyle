@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 export default function CartSidebar() {
-    const { state: { items, isOpen }, toggleCart, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
+    const { items, isOpen, toggleCart, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
     const [isCheckingInventory, setIsCheckingInventory] = useState(false);
 
     // Prevent scroll when cart is open

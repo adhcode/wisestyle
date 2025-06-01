@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { PaymentService } from '@/services/payment.service';
 import { toast } from 'react-hot-toast';
 import { useCart } from '@/contexts/CartContext';
 
-export default function PaymentVerificationPage() {
-    const router = useRouter();
+function PaymentVerifyContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const { clearCart } = useCart();
-    const [isVerifying, setIsVerifying] = useState(true);
+    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+    const [message, setMessage] = useState('');
 
     useEffect(() => {
         const verifyPayment = async () => {
@@ -49,7 +50,8 @@ export default function PaymentVerificationPage() {
                 toast.error('Failed to verify payment. Please contact support.');
                 router.push('/checkout');
             } finally {
-                setIsVerifying(false);
+                setStatus('error');
+                setMessage(error?.message || 'Failed to verify payment');
             }
         };
 
@@ -62,16 +64,39 @@ export default function PaymentVerificationPage() {
         router.push('/orders');
     };
 
-    if (isVerifying) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-                    <p className="text-gray-600">Verifying your payment...</p>
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8">
+                <div>
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Payment Verification
+                    </h2>
+                    <div className="mt-4">
+                        {status === 'loading' && (
+                            <div className="flex justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            </div>
+                        )}
+                        {(status === 'success' || status === 'error') && (
+                            <div className={`text-center ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                                {message}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+}
 
-    return null;
+export default function PaymentVerifyPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+        }>
+            <PaymentVerifyContent />
+        </Suspense>
+    );
 } 

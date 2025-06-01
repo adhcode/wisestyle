@@ -13,14 +13,16 @@ interface ProductModalProps {
 const initialFormData: ProductFormData = {
     name: '',
     price: 0,
-    categoryId: '',
     description: '',
+    categoryId: '',
     images: [],
     sizes: [],
     colors: [],
     tags: [],
     inventory: [],
-    isLimited: false
+    isLimited: false,
+    displaySection: 'NONE',
+    originalPrice: 0
 };
 
 const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -158,48 +160,17 @@ export default function ProductModal({
         e.preventDefault();
         setIsLoading(true);
         try {
-            // Validate inventory
-            const hasInventory = inventory.length > 0;
-            if (!hasInventory) {
-                toast.error('Please set inventory for at least one size/color combination');
-                return;
-            }
-
-            // Check if all size/color combinations have inventory
-            const allCombinationsHaveInventory = formData.sizes.every(sizeId =>
-                formData.colors.every(colorId =>
-                    inventory.some(
-                        item => item.sizeId === sizeId && item.colorId === colorId
-                    )
-                )
-            );
-
-            if (!allCombinationsHaveInventory) {
-                toast.error('Please set inventory for all size/color combinations');
-                return;
-            }
-
-            // Prepare the data to match the backend DTO exactly
-            const submitData = {
-                name: formData.name,
-                price: formData.price,
-                originalPrice: formData.originalPrice,
-                description: formData.description,
-                categoryId: formData.categoryId,
-                image: formData.image,
-                images: formData.images,
-                isLimited: formData.isLimited,
-                sizes: formData.sizes,
-                colors: formData.colors,
-                tags: formData.tags,
-                inventory: inventory
+            const productData: ProductFormData = {
+                ...formData,
+                displaySection: formData.displaySection || 'NONE',
+                inventory: inventory,
+                images: uploadedImages,
             };
-
-            console.log('Submitting data:', submitData);
-            await onSubmit(submitData);
+            await onSubmit(productData);
             onClose();
+            toast.success('Product saved successfully!');
         } catch (error) {
-            console.error('Submit error:', error);
+            console.error('Error saving product:', error);
             toast.error('Failed to save product');
         } finally {
             setIsLoading(false);

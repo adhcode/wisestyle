@@ -11,7 +11,7 @@ export const CartService = {
     },
 
     async updateQuantity(itemId: string | number, quantity: number): Promise<{ items: CartItem[] }> {
-        return apiClient.patch(`/api/cart/${itemId}`, { quantity });
+        return apiClient.put(`/api/cart/${itemId}`, { quantity });
     },
 
     async removeFromCart(itemId: string | number): Promise<{ items: CartItem[] }> {

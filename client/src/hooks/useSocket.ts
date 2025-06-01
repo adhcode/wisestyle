@@ -11,7 +11,8 @@ export function useSocket(productId: string): UseSocketReturn {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
-  const { userId } = useAuthHook();
+  const { user } = useAuthHook();
+  const userId = user?.id;
 
   useEffect(() => {
     const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
