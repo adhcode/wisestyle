@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Hero from './components/Hero';
-import NewArrivals from './components/NewArrivals';
+
 
 import ProductSection, { Product } from './components/ProductSection';
 import { ProductService } from '@/services/product.service';
