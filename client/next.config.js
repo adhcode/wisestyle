@@ -24,11 +24,19 @@ const nextConfig = {
     ];
   },
   async headers() {
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? ["https://wisestyle.vercel.app", "https://wisestyle.onrender.com"]
+        : ["http://localhost:3000", "http://localhost:3001"];
+
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: allowedOrigins.join(","),
+          },
           {
             key: "Access-Control-Allow-Methods",
             value: "GET,OPTIONS,PATCH,DELETE,POST,PUT",
@@ -38,9 +46,25 @@ const nextConfig = {
             value:
               "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
           },
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
         ],
       },
     ];
+  },
+  // Add webpack configuration for better environment handling
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
   },
 };
 

@@ -2,6 +2,11 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+interface ApiErrorResponse {
+  message: string;
+  statusCode?: number;
+}
+
 export class ApiError extends Error {
   status: number;
   
@@ -9,6 +14,7 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
     this.name = 'ApiError';
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
@@ -16,6 +22,7 @@ export class NotFoundError extends ApiError {
   constructor(resource: string) {
     super(`${resource} not found`, 404);
     this.name = 'NotFoundError';
+    Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 }
 
@@ -26,6 +33,7 @@ export class RateLimitError extends ApiError {
     super(message || 'Too many requests, please try again later', 429);
     this.name = 'RateLimitError';
     this.retryAfter = retryAfter;
+    Object.setPrototypeOf(this, RateLimitError.prototype);
   }
 }
 
@@ -56,34 +64,32 @@ class ApiClient {
       return data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{ message: string }>;
-        const status = axiosError.response?.status;
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        const status = axiosError.response?.status ?? 500;
+        const message = axiosError.response?.data?.message ?? 'An error occurred';
         
-        if (status === 401) {
-          // Only redirect if we're not already on the sign-in page
-          if (!window.location.pathname.includes('/sign-in')) {
-            localStorage.removeItem('token');
-            // Use a custom event to handle redirects
-            window.dispatchEvent(new CustomEvent('auth:signout', {
-              detail: { redirectUrl: window.location.pathname }
-            }));
-          }
-        }
-
-        if (status === 404) {
-          throw new NotFoundError(resource);
-        }
-        
-        if (status === 429) {
-          // Get retry-after header, defaulting to 60 seconds if not present
-          const retryAfter = parseInt(axiosError.response?.headers?.['retry-after'] || '60', 10);
-          throw new RateLimitError(
-            axiosError.response?.data?.message || 'Too many requests, please try again later',
-            retryAfter
-          );
+        switch (status) {
+          case 401:
+            if (!window.location.pathname.includes('/sign-in')) {
+              localStorage.removeItem('token');
+              // Use a custom event to handle redirects
+              window.dispatchEvent(new CustomEvent('auth:signout', {
+                detail: { redirectUrl: window.location.pathname }
+              }));
+            }
+            break;
+            
+          case 404:
+            throw new NotFoundError(resource);
+            
+          case 429:
+            // Get retry-after header, defaulting to 60 seconds if not present
+            const retryAfter = parseInt(axiosError.response?.headers?.['retry-after'] ?? '60', 10);
+            throw new RateLimitError(message, retryAfter);
         }
         
-        throw new ApiError(axiosError.response?.data?.message || 'An error occurred', status || 500);
+        const apiError = new ApiError(message, status);
+        throw apiError;
       }
       throw error;
     }

@@ -15,6 +15,7 @@ async function bootstrap() {
   });
   
   const configService = app.get(ConfigService);
+  const isProduction = configService.get('NODE_ENV') === 'production';
   
   // Security middleware
   app.use(helmet());
@@ -36,8 +37,8 @@ async function bootstrap() {
   });
 
   // Apply rate limiting
-  app.use('/api/products/homepage-sections', publicLimiter); // More lenient for homepage sections
-  app.use('/api', apiLimiter); // Stricter for other API routes
+  app.use('/api/products/homepage-sections', publicLimiter);
+  app.use('/api', apiLimiter);
 
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
@@ -48,7 +49,7 @@ async function bootstrap() {
   // Serve static files from the uploads directory with caching
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
-    maxAge: '1d', // Cache static assets for 1 day
+    maxAge: '1d',
     immutable: true,
   });
 
@@ -56,9 +57,23 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // CORS configuration
+  const allowedOrigins = isProduction 
+    ? ['https://wisestyle.vercel.app']
+    : ['http://localhost:3000', 'http://localhost:3001'];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'https://wisestyle.vercel.app',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 3600,
   });
 
   // Global error handler
@@ -77,8 +92,11 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0', () => {
     logger.log(`Application is running on port ${port}`);
     logger.log(`Environment: ${process.env.NODE_ENV}`);
+    logger.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+    logger.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
     logger.log(`Database URL configured: ${!!process.env.DATABASE_URL}`);
     logger.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
   });
 }
+
 bootstrap(); 
