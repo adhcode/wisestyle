@@ -62,17 +62,22 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // CORS configuration
-  const allowedOrigins = isProduction 
-    ? ['https://wisestyle.vercel.app']
+  const defaultProdOrigin = 'https://wisestyle.vercel.app';
+  const envFrontend = process.env.FRONTEND_URL;
+  const allowedOrigins = isProduction
+    ? [defaultProdOrigin, envFrontend].filter(Boolean)
     : ['http://localhost:3000', 'http://localhost:3001'];
 
-  logger.log(`Configuring CORS with allowed origins: ${allowedOrigins.join(', ')}`);
+  // Trust first proxy (Render/Vercel etc.) so rate-limit & logging work with X-Forwarded-For
+  app.set('trust proxy', 1);
+
+  const vercelRegex = /\.vercel\.app$/;
 
   app.enableCors({
     origin: (origin, callback) => {
       logger.debug(`Incoming request from origin: ${origin}`);
-      
-      if (!origin || allowedOrigins.includes(origin)) {
+
+      if (!origin || allowedOrigins.includes(origin) || vercelRegex.test(origin)) {
         callback(null, true);
       } else {
         logger.warn(`Blocked request from unauthorized origin: ${origin}`);
