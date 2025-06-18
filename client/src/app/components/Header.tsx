@@ -15,7 +15,7 @@ interface CategoryTree {
     children?: CategoryTree[];
 }
 
-const headerCategorySlugs = ['shirts', 'native-wears', 'trousers', 'accessories'];
+const headerCategorySlugs = ['shirts', 'native-wear', 'trousers', 'accessories', 'footwears'];
 
 export default function Header() {
     const { totalItems } = useCart();

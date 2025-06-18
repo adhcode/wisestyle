@@ -3,15 +3,59 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice: number | null;
+  slug: string;
+  categoryId: string;
   image: string;
-  category: string;
-  size: string[];
-  color: string[];
-  inStock: boolean;
+  isLimited: boolean;
+  displaySection: string;
+  status: string;
+  stock: number;
+  tags: string[];
+  category?: Category;
+  sizes?: Size[];
+  colors?: Color[];
+  inventory?: ProductInventory[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Category {
   id: string;
   name: string;
+  slug: string;
   description: string;
+  type: string;
+  image: string | null;
+  imageUrl: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  parentId: string | null;
+  children?: Category[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Size {
+  id: string;
+  name: string;
+  value: string;
+  category: string;
+}
+
+export interface Color {
+  id: string;
+  name: string;
+  value: string;
+  class: string;
+}
+
+export interface ProductInventory {
+  id: string;
+  productId: string;
+  sizeId: string;
+  colorId: string;
+  quantity: number;
+  size: Size;
+  color: Color;
 } 

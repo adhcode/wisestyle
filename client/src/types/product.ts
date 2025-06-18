@@ -25,9 +25,13 @@ export interface Category {
     name: string;
     slug: string;
     description?: string;
-    type: 'MAIN' | 'LIFESTYLE';
-    image?: string;
+    type: string;
+    image: string | null;
+    imageUrl: string | null;
+    displayOrder: number;
     isActive: boolean;
+    parentId: string | null;
+    children?: Category[];
     createdAt: string;
     updatedAt: string;
 }
@@ -50,7 +54,7 @@ export interface ProductFormData {
     colors: string[];
     tags: string[];
     inventory: InventoryItem[];
-    displaySection: 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS' | 'NONE';
+    displaySection: 'NONE' | 'NEW_ARRIVAL' | 'TRENDING' | 'SALES';
 }
 
 export interface Product {

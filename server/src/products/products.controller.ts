@@ -44,9 +44,12 @@ export class ProductsController {
   }
 
   @Public()
-  @Get('category/:categoryId')
-  findByCategory(@Param('categoryId') categoryId: string) {
-    return this.productsService.findByCategory(categoryId);
+  @Get('category/:slug')
+  findByCategory(
+    @Param('slug') slug: string,
+    @Query('includeChildren') includeChildren: boolean = false
+  ) {
+    return this.productsService.findByCategorySlug(slug, includeChildren);
   }
 
   @Public()

@@ -1,24 +1,156 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { Product } from '@/types/product';
+import { Category } from '@/types';
 import { ProductService } from '@/services/product.service';
 
-// Filter and sort options
-const categories = ['All', 'Shirts', 'Bottoms', 'Shoes', 'Accessories', 'Watches', 'Custom Tailored'];
 const sortOptions = [
     { name: 'Newest', value: 'newest' },
     { name: 'Price: Low to High', value: 'price-asc' },
     { name: 'Price: High to Low', value: 'price-desc' },
 ];
 
-function ProductsContent() {
+// Featured products to be added as new arrivals
+const featuredNewArrivals: Product[] = [
+    {
+        id: '1',
+        name: 'Agbada',
+        price: 25000,
+        image: '/images/new-arrivals/agbada.png',
+        slug: 'agbada',
+        description: 'Premium Agbada Set',
+        categoryId: 'native-wear',
+        category: {
+            id: 'native-wear',
+            name: 'Native Wear',
+            slug: 'native-wear',
+            description: '',
+            type: 'MAIN',
+            image: null,
+            imageUrl: null,
+            displayOrder: 0,
+            isActive: true,
+            parentId: null,
+            children: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        },
+        images: ['/images/new-arrivals/agbada.png'],
+        sizes: [],
+        colors: [],
+        tags: ['native wear', 'agbada'],
+        inventory: [],
+        displaySection: 'NEW_ARRIVALS',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+    {
+        id: '2',
+        name: 'Shorts',
+        price: 25000,
+        image: '/images/new-arrivals/shorts.png',
+        slug: 'shorts',
+        description: 'Comfortable Shorts',
+        categoryId: 'shorts',
+        category: {
+            id: 'shorts',
+            name: 'Shorts',
+            slug: 'shorts',
+            description: '',
+            type: 'MAIN',
+            image: null,
+            imageUrl: null,
+            displayOrder: 0,
+            isActive: true,
+            parentId: null,
+            children: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        },
+        images: ['/images/new-arrivals/shorts.png'],
+        sizes: [],
+        colors: [],
+        tags: ['shorts'],
+        inventory: [],
+        displaySection: 'NEW_ARRIVALS',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+    {
+        id: '3',
+        name: 'Chinos Trouser',
+        price: 25000,
+        image: '/images/new-arrivals/chinos-trouser.png',
+        slug: 'chinos-trouser',
+        description: 'Classic Chinos Trouser',
+        categoryId: 'trousers',
+        category: {
+            id: 'trousers',
+            name: 'Trousers',
+            slug: 'trousers',
+            description: '',
+            type: 'MAIN',
+            image: null,
+            imageUrl: null,
+            displayOrder: 0,
+            isActive: true,
+            parentId: null,
+            children: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        },
+        images: ['/images/new-arrivals/chinos-trouser.png'],
+        sizes: [],
+        colors: [],
+        tags: ['trousers', 'chinos'],
+        inventory: [],
+        displaySection: 'NEW_ARRIVALS',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+    {
+        id: '4',
+        name: 'Kaftans Shirts',
+        price: 25000,
+        image: '/images/new-arrivals/kaftan.png',
+        slug: 'kaftan-shirts',
+        description: 'Elegant Kaftan Shirts',
+        categoryId: 'native-wear',
+        category: {
+            id: 'native-wear',
+            name: 'Native Wear',
+            slug: 'native-wear',
+            description: '',
+            type: 'MAIN',
+            image: null,
+            imageUrl: null,
+            displayOrder: 0,
+            isActive: true,
+            parentId: null,
+            children: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        },
+        images: ['/images/new-arrivals/kaftan.png'],
+        sizes: [],
+        colors: [],
+        tags: ['native wear', 'kaftan'],
+        inventory: [],
+        displaySection: 'NEW_ARRIVALS',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    },
+];
+
+export default function ProductsPage() {
     const searchParams = useSearchParams();
-    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [sortBy, setSortBy] = useState('newest');
     const [likedProducts, setLikedProducts] = useState<string[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -27,14 +159,43 @@ function ProductsContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch products
+    // Fetch categories
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('http://localhost:3001/api/categories');
+                const data = await response.json();
+                const topLevelCategories = data.filter((cat: Category) => !cat.parentId);
+                setCategories(topLevelCategories);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    // Fetch products including new arrivals
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // Fetch first page with a large limit to get all products
-                const data = await ProductService.getProducts(1, 100);
-                console.log('Fetched products:', data);
-                setProducts(data);
+                // Fetch both regular products and new arrivals
+                const [regularProducts, newArrivals] = await Promise.all([
+                    ProductService.getProducts(1, 100),
+                    ProductService.getNewArrivals()
+                ]);
+
+                // Combine regular products with new arrivals and featured products
+                const allProducts = [
+                    ...featuredNewArrivals,
+                    ...newArrivals,
+                    ...regularProducts.filter(p =>
+                        !newArrivals.find(na => na.id === p.id) &&
+                        !featuredNewArrivals.find(fa => fa.id === p.id)
+                    )
+                ];
+
+                setProducts(allProducts);
             } catch (err) {
                 console.error('Error fetching products:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -50,19 +211,15 @@ function ProductsContent() {
     useEffect(() => {
         const categoryFromUrl = searchParams.get('category');
         if (categoryFromUrl) {
-            const formattedCategory = categoryFromUrl.charAt(0).toUpperCase() + categoryFromUrl.slice(1);
-            if (categories.includes(formattedCategory)) {
-                setSelectedCategory(formattedCategory);
-            }
+            setSelectedCategory(categoryFromUrl);
         }
     }, [searchParams]);
 
     // Filter products by category
     const filteredProducts = products.filter(product => {
-        console.log('Filtering product:', product.name, 'Category:', product.category?.name);
-        return selectedCategory === 'All' || (product.category && product.category.name.toLowerCase() === selectedCategory.toLowerCase());
+        if (!selectedCategory) return true;
+        return product.category?.slug === selectedCategory;
     });
-    console.log('Filtered products:', filteredProducts);
 
     // Sort products
     const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -71,6 +228,13 @@ function ProductsContent() {
                 return a.price - b.price;
             case 'price-desc':
                 return b.price - a.price;
+            case 'newest':
+                // Featured new arrivals should always appear first when sorting by newest
+                const aIsFeatured = featuredNewArrivals.some(f => f.id === a.id);
+                const bIsFeatured = featuredNewArrivals.some(f => f.id === b.id);
+                if (aIsFeatured && !bIsFeatured) return -1;
+                if (!aIsFeatured && bIsFeatured) return 1;
+                return new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime();
             default:
                 return 0;
         }
@@ -87,53 +251,82 @@ function ProductsContent() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C97203]"></div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
+            <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
                 <p className="text-red-500">{error}</p>
             </div>
         );
     }
 
-    return (
-        <div className="bg-white min-h-screen">
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 sm:py-12">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-medium mb-4">{selectedCategory} Products</h1>
-                    <p className="text-gray-600">Discover our collection of premium menswear</p>
-                </div>
+    const selectedCategoryData = selectedCategory
+        ? categories.find(cat => cat.slug === selectedCategory)
+        : null;
 
+    return (
+        <div className="bg-[#FFFCF8]">
+            {/* Hero Section */}
+            <div className="relative bg-[#3B2305] text-white py-12 mb-8">
+                <div className="absolute inset-0 overflow-hidden">
+                    <Image
+                        src="/images/hero-pattern.png"
+                        alt="Pattern"
+                        fill
+                        className="object-cover opacity-10"
+                    />
+                </div>
+                <div className="relative max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
+                    <div className="text-center">
+                        <h1 className="text-3xl sm:text-4xl font-bold mb-4 font-outfit">
+                            {selectedCategoryData ? selectedCategoryData.name : 'All Products'}
+                        </h1>
+                        <p className="text-gray-300 max-w-2xl mx-auto font-lato">
+                            {selectedCategoryData?.description || 'Discover our exclusive collection of premium menswear, crafted with the finest materials and attention to detail.'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px] py-8">
                 {/* Mobile Filters Button */}
                 <button
-                    className="md:hidden w-full mb-4 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg"
+                    className="md:hidden w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 bg-[#C97203] text-white rounded-lg font-medium"
                     onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
                 >
-                    <SlidersHorizontal className="w-4 h-4" />
+                    <SlidersHorizontal className="w-5 h-5" />
                     Filters & Sort
                 </button>
 
                 {/* Filters and Sort */}
                 <div className={`${isMobileFiltersOpen ? 'block' : 'hidden'} md:block mb-8`}>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm">
                         {/* Categories */}
                         <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={() => setSelectedCategory(null)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedCategory
+                                    ? 'bg-[#C97203] text-white'
+                                    : 'bg-[#F9F5F0] text-[#3B2305] hover:bg-[#F0EBE1]'
+                                    }`}
+                            >
+                                All
+                            </button>
                             {categories.map((category) => (
                                 <button
-                                    key={category}
-                                    onClick={() => setSelectedCategory(category)}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category
-                                        ? 'bg-black text-white'
-                                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                                    key={category.id}
+                                    onClick={() => setSelectedCategory(category.slug)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category.slug
+                                        ? 'bg-[#C97203] text-white'
+                                        : 'bg-[#F9F5F0] text-[#3B2305] hover:bg-[#F0EBE1]'
                                         }`}
                                 >
-                                    {category}
+                                    {category.name}
                                 </button>
                             ))}
                         </div>
@@ -142,14 +335,14 @@ function ProductsContent() {
                         <div className="relative w-full md:w-auto">
                             <button
                                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className="w-full md:w-auto flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition-colors"
+                                className="w-full md:w-auto flex items-center justify-between gap-2 px-4 py-2 rounded-lg bg-[#F9F5F0] text-sm font-medium hover:bg-[#F0EBE1] transition-colors text-[#3B2305]"
                             >
                                 Sort by
-                                <ChevronDown className="w-4 h-4" />
+                                <ChevronDown className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
                             </button>
 
                             {isFilterOpen && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-10">
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-[#E5E1D8] z-10">
                                     {sortOptions.map((option) => (
                                         <button
                                             key={option.value}
@@ -157,7 +350,7 @@ function ProductsContent() {
                                                 setSortBy(option.value);
                                                 setIsFilterOpen(false);
                                             }}
-                                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${sortBy === option.value ? 'font-medium' : ''
+                                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-[#F9F5F0] transition-colors ${sortBy === option.value ? 'text-[#C97203] font-medium' : 'text-[#3B2305]'
                                                 }`}
                                         >
                                             {option.name}
@@ -175,10 +368,10 @@ function ProductsContent() {
                         <Link
                             href={`/product/${product.slug}`}
                             key={product.id}
-                            className="group relative block bg-white overflow-hidden"
+                            className="group relative block bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                         >
                             {/* Product Image */}
-                            <div className="relative w-full pb-[125%] bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="relative w-full pb-[125%] bg-[#F9F5F0] overflow-hidden">
                                 <Image
                                     src={product.image || '/placeholder-product.png'}
                                     alt={product.name}
@@ -189,9 +382,16 @@ function ProductsContent() {
                                 />
                             </div>
 
+                            {/* New Arrival Tag */}
+                            {featuredNewArrivals.some(f => f.id === product.id) && (
+                                <span className="absolute top-2 left-2 bg-[#C97203]/90 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full font-medium">
+                                    New Arrival
+                                </span>
+                            )}
+
                             {/* Limited Tag */}
                             {product.isLimited && (
-                                <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-gray-900 text-[10px] px-1.5 py-1 rounded-full font-medium">
+                                <span className="absolute top-2 left-2 bg-[#3B2305]/90 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full font-medium">
                                     Limited Edition
                                 </span>
                             )}
@@ -199,22 +399,29 @@ function ProductsContent() {
                             {/* Like Button */}
                             <button
                                 onClick={(e) => toggleLike(e, product.id)}
-                                className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full"
+                                className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
                             >
                                 {likedProducts.includes(product.id) ? (
-                                    <Heart className="w-4 h-4 fill-red-500 stroke-red-500" />
+                                    <Heart className="w-4 h-4 fill-[#C97203] stroke-[#C97203]" />
                                 ) : (
-                                    <Heart className="w-4 h-4 stroke-gray-600" />
+                                    <Heart className="w-4 h-4 stroke-[#3B2305]" />
                                 )}
                             </button>
 
                             {/* Product Info */}
-                            <div className="mt-4">
-                                <h3 className="text-sm font-medium text-gray-900 mb-1 truncate">
+                            <div className="p-4">
+                                <div className="mb-1">
+                                    {product.category && (
+                                        <span className="text-xs text-[#C97203] font-medium">
+                                            {product.category.name}
+                                        </span>
+                                    )}
+                                </div>
+                                <h3 className="text-sm font-medium text-[#3B2305] mb-1 truncate">
                                     {product.name}
                                 </h3>
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm font-bold text-gray-900">
+                                    <p className="text-sm font-bold text-[#3B2305]">
                                         ₦{(product.price).toLocaleString()}
                                     </p>
                                     {product.originalPrice && (
@@ -230,23 +437,11 @@ function ProductsContent() {
 
                 {/* Empty State */}
                 {sortedProducts.length === 0 && (
-                    <div className="text-center py-12">
-                        <p className="text-gray-600">No products found in this category.</p>
+                    <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                        <p className="text-[#3B2305]">No products found in this category.</p>
                     </div>
                 )}
             </div>
         </div>
-    );
-}
-
-export default function ProductsPage() {
-    return (
-        <Suspense fallback={
-            <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-        }>
-            <ProductsContent />
-        </Suspense>
     );
 } 

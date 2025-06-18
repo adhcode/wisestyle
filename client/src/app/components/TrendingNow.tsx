@@ -6,86 +6,41 @@ import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { useLikes } from '@/contexts/LikesContext';
 import { useCart } from '@/contexts/CartContext';
-import { Product, Size, Color } from '@/types/product';
+import { Product } from '@/types/product';
 import CartButton from './CartButton';
 import { RateLimitError } from '@/utils/api-client';
-
-interface TrendingProduct {
-    id: number;
-    name: string;
-    slug: string;
-    price: number;
-    image: string;
-    description?: string;
-    categoryId?: string;
-    images?: string[];
-    isLimited?: boolean;
-    sizes?: Size[];
-    colors?: Color[];
-    tags?: string[];
-    inventory?: any[];
-    displaySection?: 'NONE'
-    createdAt?: Date;
-    updatedAt?: Date;
-}
-
-const trendingProducts: TrendingProduct[] = [
-    {
-        id: 1,
-        name: 'Kaftan',
-        slug: 'kaftan',
-        price: 25000,
-        image: '/images/trending/kaftant.png',
-        description: '',
-        categoryId: '',
-        images: ['/images/trending/kaftant.png'],
-        isLimited: false,
-        sizes: [],
-        colors: [],
-        tags: [],
-        inventory: [],
-        displaySection: 'NONE',
-        createdAt: new Date(),
-        updatedAt: new Date()
-    },
-    {
-        id: 2,
-        name: 'Black Tshirt',
-        slug: 'black-tshirt',
-        price: 22000,
-        image: '/images/trending/blacktshirt.png',
-        description: '',
-        categoryId: '',
-        images: ['/images/trending/blacktshirt.png'],
-        isLimited: false,
-        sizes: [],
-        colors: [],
-        tags: [],
-        inventory: [],
-        displaySection: 'NONE',
-        createdAt: new Date(),
-        updatedAt: new Date()
-    },
-    { id: 3, name: 'Watch', slug: 'watch', price: 15000, image: '/images/trending/watches.png' },
-    { id: 4, name: 'Jean', slug: 'jean', price: 25000, image: '/images/trending/jean.png' },
-    { id: 5, name: 'Agbada', slug: 'agbada', price: 30000, image: '/images/new-arrivals/agbada.png' },
-    { id: 6, name: 'Sunglass', slug: 'sunglass', price: 20000, image: '/images/trending/sunglass.png' },
-    { id: 7, name: 'White Tshirt', slug: 'white-tshirt', price: 12000, image: '/images/trending/white-shirt.png' },
-    { id: 8, name: 'Chinos', slug: 'chinos', price: 27000, image: '/images/new-arrivals/chinos-trouser.png' },
-    { id: 9, name: 'Hats', slug: 'hats', price: 8000, image: '/images/trending/hat.png' },
-    { id: 10, name: 'Black Tshirt', slug: 'black-tshirt', price: 16000, image: '/images/trending/blacktshirt.png' },
-    { id: 11, name: 'White Tshirt', slug: 'white-tshirt', price: 24000, image: '/images/trending/white-shirt.png' },
-    { id: 12, name: 'Bracelet', slug: 'bracelet', price: 21000, image: '/images/trending/wristband.png' },
-];
+import { ProductService } from '@/services/product.service';
 
 export default function TrendingNow() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
     const { state: { likedProducts }, toggleLike } = useLikes();
     const { addItem } = useCart();
-    const [selectedProduct, setSelectedProduct] = useState<TrendingProduct | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [rateLimitError, setRateLimitError] = useState<string | null>(null);
 
-    const openQuickView = (product: TrendingProduct, e: React.MouseEvent<HTMLElement>) => {
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await ProductService.getHomepageSections();
+                console.log('Homepage sections response:', response);
+                const trendingSection = response.find(section => section.title === 'Best Sellers');
+                console.log('Found trending section:', trendingSection);
+                if (trendingSection) {
+                    setProducts(trendingSection.products);
+                }
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching trending products:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    const openQuickView = (product: Product, e: React.MouseEvent<HTMLElement>) => {
         e.preventDefault();
         setSelectedProduct(product);
         setShowModal(true);
@@ -103,12 +58,30 @@ export default function TrendingNow() {
         } catch (error) {
             if (error instanceof RateLimitError) {
                 setRateLimitError(`${error.message}. Please try again in ${Math.ceil(error.retryAfter)} seconds.`);
-                // Auto-dismiss the error after the retry period
                 setTimeout(() => setRateLimitError(null), error.retryAfter * 1000);
             }
             console.error('Error toggling like:', error);
         }
     };
+
+    if (loading) {
+        return (
+            <section className="py-16 bg-[#FEFBF4]">
+                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
+                    <div className="h-8 w-48 bg-gray-200 rounded mb-8 animate-pulse"></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-[16px] w-full">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                            <div key={i} className="animate-pulse">
+                                <div className="aspect-[1/1] bg-gray-200 rounded-[4px] mb-3"></div>
+                                <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+                                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="py-16 bg-[#FEFBF4]">
@@ -126,7 +99,7 @@ export default function TrendingNow() {
                 )}
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-[16px] w-full">
-                    {trendingProducts.map((product) => (
+                    {products.map((product) => (
                         <Link
                             key={product.id}
                             href={`/product/${product.slug}`}
@@ -134,7 +107,7 @@ export default function TrendingNow() {
                         >
                             <div className="relative w-full aspect-[1/1]">
                                 <Image
-                                    src={product.image}
+                                    src={product.image || '/images/placeholder.jpg'}
                                     alt={product.name}
                                     fill
                                     className="object-cover object-center"
@@ -143,12 +116,12 @@ export default function TrendingNow() {
                                 <button
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        handleToggleLike(product.id);
+                                        handleToggleLike(Number(product.id));
                                     }}
                                     className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                 >
                                     <Heart
-                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(product.id)
+                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(Number(product.id))
                                             ? 'fill-red-500 stroke-red-500'
                                             : 'stroke-gray-600'
                                             }`}
@@ -164,23 +137,7 @@ export default function TrendingNow() {
                                             Quick View
                                         </span>
                                         <CartButton
-                                            product={{
-                                                id: product.id.toString(),
-                                                name: product.name,
-                                                slug: product.slug,
-                                                price: product.price,
-                                                description: product.description || '',
-                                                categoryId: product.categoryId || '',
-                                                images: product.images || [product.image],
-                                                isLimited: product.isLimited || false,
-                                                sizes: product.sizes || [],
-                                                colors: product.colors || [],
-                                                tags: product.tags || [],
-                                                inventory: product.inventory || [],
-                                                displaySection: (product.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
-                                                createdAt: product.createdAt || new Date(),
-                                                updatedAt: product.updatedAt || new Date()
-                                            }}
+                                            product={product}
                                             className="hover:underline cursor-pointer border border-l-[#D1B99B] border-r-0 border-t-0 border-b-0 px-6 py-1"
                                             onSuccess={() => closeModal()}
                                         />
@@ -193,23 +150,7 @@ export default function TrendingNow() {
                             </div>
                             <div className="pb-3 block md:hidden">
                                 <CartButton
-                                    product={{
-                                            id: product.id.toString(),
-                                            name: product.name,
-                                            slug: product.slug,
-                                            price: product.price,
-                                        description: product.description || '',
-                                        categoryId: product.categoryId || '',
-                                        images: product.images || [product.image],
-                                        isLimited: product.isLimited || false,
-                                        sizes: product.sizes || [],
-                                        colors: product.colors || [],
-                                        tags: product.tags || [],
-                                        inventory: product.inventory || [],
-                                        displaySection: (product.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
-                                        createdAt: product.createdAt || new Date(),
-                                        updatedAt: product.updatedAt || new Date()
-                                    }}
+                                    product={product}
                                     className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
                                 />
                             </div>
@@ -235,7 +176,7 @@ export default function TrendingNow() {
                             {/* Product Image */}
                             <div className="w-full md:w-1/2 relative h-[300px] md:h-[450px]">
                                 <Image
-                                    src={selectedProduct.image}
+                                    src={selectedProduct.image || '/images/placeholder.jpg'}
                                     alt={selectedProduct.name}
                                     fill
                                     className="object-contain"
@@ -255,23 +196,7 @@ export default function TrendingNow() {
                                         View Full Details
                                     </Link>
                                     <CartButton
-                                        product={{
-                                            id: selectedProduct.id.toString(),
-                                            name: selectedProduct.name,
-                                            slug: selectedProduct.slug,
-                                            price: selectedProduct.price,
-                                            description: selectedProduct.description || '',
-                                            categoryId: selectedProduct.categoryId || '',
-                                            images: selectedProduct.images || [selectedProduct.image],
-                                            isLimited: selectedProduct.isLimited || false,
-                                            sizes: selectedProduct.sizes || [],
-                                            colors: selectedProduct.colors || [],
-                                            tags: selectedProduct.tags || [],
-                                            inventory: selectedProduct.inventory || [],
-                                            displaySection: (selectedProduct.displaySection || 'NONE') as 'NONE' | 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS',
-                                            createdAt: selectedProduct.createdAt || new Date(),
-                                            updatedAt: selectedProduct.updatedAt || new Date()
-                                        }}
+                                        product={selectedProduct}
                                         className="block w-full border border-[#D1B99B] text-[#3B2305] py-3 rounded text-center hover:bg-[#F9F5F0] transition-colors"
                                         onSuccess={closeModal}
                                     />

@@ -41,6 +41,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     const [rateLimitError, setRateLimitError] = useState<string | null>(null);
     const { state: { likedProducts }, toggleLike } = useLikes();
     const { addItem } = useCart();
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -59,11 +60,19 @@ export default function ProductPage({ params }: ProductPageProps) {
                 }
 
                 if (productData?.sizes?.length > 0) {
-                    setSelectedSize(productData.sizes[0].toString());
+                    setSelectedSize(productData.sizes[0].value);
                 }
 
                 if (productData?.colors?.length > 0) {
-                    setSelectedColor(productData.colors[0].toString());
+                    setSelectedColor(productData.colors[0].value);
+                }
+
+                // Fetch related products from other categories
+                try {
+                    const related = await ProductService.getRelatedProducts(productData.id);
+                    setRelatedProducts(related);
+                } catch (err) {
+                    console.error('Error fetching related products', err);
                 }
 
             } catch (err) {
@@ -225,7 +234,24 @@ export default function ProductPage({ params }: ProductPageProps) {
                             <span className="text-base text-[#3B2305] line-through opacity-60">₦{product.price.toLocaleString()}</span>
                         )}
                     </div>
-                    <div className="text-sm text-[#3B2305]">COLOUR: <span className="font-medium">{product.colors && product.colors.length > 0 ? product.colors[0].toString() : 'N/A'}</span></div>
+                    {/* Colour Selector */}
+                    {product.colors && product.colors.length > 0 && (
+                        <div>
+                            <label className="block text-xs font-medium text-[#3B2305] mb-1">COLOUR:</label>
+                            <div className="flex gap-2 items-center">
+                                {product.colors.map((color) => (
+                                    <button
+                                        key={color.id}
+                                        onClick={() => setSelectedColor(color.value)}
+                                        aria-label={color.name}
+                                        className={`w-6 h-6 rounded-full border ${selectedColor === color.value ? 'border-[#C97203] scale-110' : 'border-gray-300'} transition-transform`}
+                                        style={{ backgroundColor: color.value }}
+                                    />
+                                ))}
+                                <span className="text-xs ml-2">{product.colors.find(c => c.value === selectedColor)?.name}</span>
+                            </div>
+                        </div>
+                    )}
                     {/* Size Selector */}
                     {product.sizes && product.sizes.length > 0 && (
                         <div>
@@ -237,7 +263,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                             >
                                 <option value="">Please select</option>
                                 {product.sizes.map(size => (
-                                    <option key={size.toString()} value={size.toString()}>{size.toString()}</option>
+                                    <option key={size.id} value={size.value}>{size.value}</option>
                                 ))}
                             </select>
                         </div>
@@ -288,6 +314,26 @@ export default function ProductPage({ params }: ProductPageProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Related products section */}
+            {relatedProducts.length > 0 && (
+                <div className="max-w-[1200px] mx-auto px-4 pt-10 pb-16">
+                    <h2 className="text-lg font-semibold text-[#1E1E1E] mb-4">The item can be cool with</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {relatedProducts.map((rel) => (
+                            <Link href={`/product/${rel.slug}`} key={rel.id} className="group block bg-white rounded overflow-hidden shadow hover:shadow-md transition-shadow">
+                                <div className="relative w-full aspect-[3/4] bg-[#F9F5F0]">
+                                    <Image src={rel.image || '/images/placeholder-product.png'} alt={rel.name} fill className="object-cover object-center" sizes="(max-width:768px) 50vw, 25vw" />
+                                </div>
+                                <div className="p-3 flex flex-col gap-1">
+                                    <span className="text-sm text-[#3B2305] truncate">{rel.name}</span>
+                                    <span className="text-sm font-medium text-[#C97203]">₦{rel.price.toLocaleString()}</span>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 } 

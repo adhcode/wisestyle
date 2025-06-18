@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Query } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('categories')
 export class CategoriesController {
@@ -17,18 +18,21 @@ export class CategoriesController {
     return this.categoriesService.create(createCategoryDto);
   }
 
+  @Public()
   @Get('tree')
   getCategoryTree() {
     return this.categoriesService.getCategoryTree();
   }
 
+  @Public()
   @Get()
-  findAll() {
+  async findAll() {
     return this.categoriesService.findAll();
   }
 
-  @Get('slug/:slug')
-  getBySlug(@Param('slug') slug: string) {
+  @Public()
+  @Get(':slug')
+  async findBySlug(@Param('slug') slug: string) {
     return this.categoriesService.findBySlug(slug);
   }
 

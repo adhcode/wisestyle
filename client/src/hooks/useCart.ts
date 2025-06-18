@@ -1,78 +1,82 @@
-import { useState, useEffect } from 'react';
-import { CartItem } from '@/types/product';
+import { create } from 'zustand';
+import { persist, PersistOptions } from 'zustand/middleware';
+import { StateCreator } from 'zustand';
 
-export function useCart() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
+  selectedSize: string;
+  selectedColor: string;
+}
 
-  useEffect(() => {
-    const savedItems = localStorage.getItem('cart');
-    if (savedItems) {
-      setCartItems(JSON.parse(savedItems));
-    }
-  }, []);
+interface CartStore {
+  items: CartItem[];
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (itemId: string, selectedSize: string, selectedColor: string) => void;
+  updateQuantity: (itemId: string, selectedSize: string, selectedColor: string, quantity: number) => void;
+  clearCart: () => void;
+}
 
-  const addToCart = (item: CartItem) => {
-    setCartItems(prev => {
-      const existingItemIndex = prev.findIndex(
-        cartItem => 
-          cartItem.id === item.id && 
-          cartItem.selectedSize === item.selectedSize && 
-          cartItem.selectedColor === item.selectedColor
-      );
+type CartPersist = (
+  config: StateCreator<CartStore>,
+  options: PersistOptions<CartStore>
+) => StateCreator<CartStore>;
 
-      if (existingItemIndex > -1) {
-        const newItems = [...prev];
-        newItems[existingItemIndex].quantity += item.quantity;
-        localStorage.setItem('cart', JSON.stringify(newItems));
-        return newItems;
-      }
+export const useCart = create<CartStore>()(
+  (persist as CartPersist)(
+    (set) => ({
+      items: [],
+      addToCart: (item: CartItem) =>
+        set((state) => {
+          const existingItem = state.items.find(
+            (i) =>
+              i.id === item.id &&
+              i.selectedSize === item.selectedSize &&
+              i.selectedColor === item.selectedColor
+          );
 
-      const newItems = [...prev, item];
-      localStorage.setItem('cart', JSON.stringify(newItems));
-      return newItems;
-    });
-  };
-
-  const removeFromCart = (itemId: string, selectedSize: string, selectedColor: string) => {
-    setCartItems(prev => {
-      const newItems = prev.filter(
-        item => 
-          !(item.id === itemId && 
-            item.selectedSize === selectedSize && 
-            item.selectedColor === selectedColor)
-      );
-      localStorage.setItem('cart', JSON.stringify(newItems));
-      return newItems;
-    });
-  };
-
-  const updateQuantity = (itemId: string, selectedSize: string, selectedColor: string, quantity: number) => {
-    setCartItems(prev => {
-      const newItems = prev.map(item => {
-        if (
-          item.id === itemId && 
-          item.selectedSize === selectedSize && 
-          item.selectedColor === selectedColor
-        ) {
-          return { ...item, quantity };
-        }
-        return item;
-      });
-      localStorage.setItem('cart', JSON.stringify(newItems));
-      return newItems;
-    });
-  };
-
-  const clearCart = () => {
-    setCartItems([]);
-    localStorage.removeItem('cart');
-  };
-
+          if (existingItem) {
   return {
-    cartItems,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart
-  };
-} 
+              items: state.items.map((i) =>
+                i.id === item.id &&
+                i.selectedSize === item.selectedSize &&
+                i.selectedColor === item.selectedColor
+                  ? { ...i, quantity: i.quantity + item.quantity }
+                  : i
+              ),
+            };
+          }
+
+          return { items: [...state.items, item] };
+        }),
+      removeFromCart: (itemId: string, selectedSize: string, selectedColor: string) =>
+        set((state) => ({
+          items: state.items.filter(
+            (i) =>
+              !(
+                i.id === itemId &&
+                i.selectedSize === selectedSize &&
+                i.selectedColor === selectedColor
+              )
+          ),
+        })),
+      updateQuantity: (itemId: string, selectedSize: string, selectedColor: string, quantity: number) =>
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.id === itemId &&
+            i.selectedSize === selectedSize &&
+            i.selectedColor === selectedColor
+              ? { ...i, quantity }
+              : i
+          ),
+        })),
+      clearCart: () => set({ items: [] }),
+    }),
+    {
+      name: 'cart-storage',
+    }
+  )
+); 

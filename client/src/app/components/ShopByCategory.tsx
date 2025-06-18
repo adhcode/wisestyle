@@ -5,7 +5,7 @@ const categories = [
     {
         name: 'Native Wears',
         image: '/images/category/native-wears.png',
-        href: '/category/native-wears',
+        href: '/category/native-wear',
         bgColor: '#E1D4C3',
     },
     {
@@ -46,7 +46,7 @@ export default function ShopByCategory() {
                             href={cat.href}
                             className="group flex-shrink-0 w-[211.2px] sm:w-full rounded-[4px] duration-200 overflow-hidden"
                         >
-                            <div className="relative w-full h-[300px]" style={{ backgroundColor: cat.bgColor }}>
+                            <div className="relative w-full rounded-[4px] h-[300px]" >
                                 <Image
                                     src={cat.image}
                                     alt={cat.name}

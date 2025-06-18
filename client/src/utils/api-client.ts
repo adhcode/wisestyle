@@ -5,22 +5,25 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 interface ApiErrorResponse {
   message: string;
   statusCode?: number;
+  error?: string;
 }
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
   
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
-    this.status = status;
     this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
 export class NotFoundError extends ApiError {
   constructor(resource: string) {
-    super(`${resource} not found`, 404);
+    super(`${resource} not found`, 404, 'NOT_FOUND');
     this.name = 'NotFoundError';
     Object.setPrototypeOf(this, NotFoundError.prototype);
   }
@@ -30,10 +33,18 @@ export class RateLimitError extends ApiError {
   retryAfter: number;
   
   constructor(message: string, retryAfter: number = 60) {
-    super(message || 'Too many requests, please try again later', 429);
+    super(message || 'Too many requests, please try again later', 429, 'RATE_LIMITED');
     this.name = 'RateLimitError';
     this.retryAfter = retryAfter;
     Object.setPrototypeOf(this, RateLimitError.prototype);
+  }
+}
+
+export class NetworkError extends ApiError {
+  constructor(message: string = 'Network error occurred') {
+    super(message, 0, 'NETWORK_ERROR');
+    this.name = 'NetworkError';
+    Object.setPrototypeOf(this, NetworkError.prototype);
   }
 }
 
@@ -63,35 +74,52 @@ class ApiClient {
       const { data } = await response;
       return data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        const status = axiosError.response?.status ?? 500;
-        const message = axiosError.response?.data?.message ?? 'An error occurred';
-        
-        switch (status) {
-          case 401:
-            if (!window.location.pathname.includes('/sign-in')) {
-              localStorage.removeItem('token');
-              // Use a custom event to handle redirects
-              window.dispatchEvent(new CustomEvent('auth:signout', {
-                detail: { redirectUrl: window.location.pathname }
-              }));
-            }
-            break;
-            
-          case 404:
-            throw new NotFoundError(resource);
-            
-          case 429:
-            // Get retry-after header, defaulting to 60 seconds if not present
-            const retryAfter = parseInt(axiosError.response?.headers?.['retry-after'] ?? '60', 10);
-            throw new RateLimitError(message, retryAfter);
-        }
-        
-        const apiError = new ApiError(message, status);
-        throw apiError;
+      console.error('API Error:', error);
+
+      if (!axios.isAxiosError(error)) {
+        throw new ApiError('An unexpected error occurred', 500, 'UNKNOWN_ERROR');
       }
-      throw error;
+
+      const axiosError = error as AxiosError<ApiErrorResponse>;
+      
+      // Handle network errors
+      if (!axiosError.response) {
+        throw new NetworkError(
+          axiosError.message || 'Unable to connect to the server'
+        );
+      }
+
+      const status = axiosError.response.status;
+      const message = axiosError.response.data?.message || axiosError.message || 'An error occurred';
+      const errorCode = axiosError.response.data?.error || 'API_ERROR';
+
+      // Handle specific error cases
+      switch (status) {
+        case 401:
+          if (!window.location.pathname.includes('/sign-in')) {
+            localStorage.removeItem('token');
+            // Use a custom event to handle redirects
+            window.dispatchEvent(new CustomEvent('auth:signout', {
+              detail: { redirectUrl: window.location.pathname }
+            }));
+          }
+          throw new ApiError('Unauthorized access', 401, 'UNAUTHORIZED');
+            
+        case 404:
+          throw new NotFoundError(resource);
+            
+        case 429:
+          // Get retry-after header, defaulting to 60 seconds if not present
+          const retryAfter = parseInt(axiosError.response.headers?.['retry-after'] ?? '60', 10);
+          throw new RateLimitError(message, retryAfter);
+
+        default:
+          throw new ApiError(
+            message,
+            status,
+            errorCode
+          );
+      }
     }
   }
 

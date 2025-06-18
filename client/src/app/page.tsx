@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Hero from './components/Hero';
-
-
 import ProductSection, { Product } from './components/ProductSection';
 import { ProductService } from '@/services/product.service';
 import Link from 'next/link';
@@ -11,21 +9,27 @@ import ShopByCategory from './components/ShopByCategory';
 import StyleAndSubstance from './components/StyleAndSubstance';
 import TrendingNow from './components/TrendingNow';
 
+interface HomepageSection {
+    id: string;
+    title: string;
+    products: Product[];
+}
+
 export default function Home() {
-    const [homepageSections, setHomepageSections] = useState<Record<string, Product[]>>({});
+    const [homepageSections, setHomepageSections] = useState<HomepageSection[]>([]);
 
     // Fetch homepage sections
     useEffect(() => {
         ProductService.getHomepageSections()
-            .then((sections: Record<string, Product[]>) => {
+            .then((sections: HomepageSection[]) => {
                 // Ensure all products have a defined image
-                const mappedSections: Record<string, Product[]> = {};
-                Object.keys(sections).forEach((key) => {
-                    mappedSections[key] = sections[key].map((product) => ({
+                const mappedSections = sections.map(section => ({
+                    ...section,
+                    products: section.products.map(product => ({
                         ...product,
                         image: product.image || '/placeholder-product.png',
-                    }));
-                });
+                    }))
+                }));
                 setHomepageSections(mappedSections);
             })
             .catch((err) => {
@@ -33,16 +37,29 @@ export default function Home() {
             });
     }, []);
 
+    useEffect(() => {
+        // Test server connection
+        const testServerConnection = async () => {
+            try {
+                console.log('Testing server connection...');
+                console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`);
+                const data = await response.json();
+                console.log('Server response:', data);
+            } catch (error) {
+                console.error('Server connection error:', error);
+            }
+        };
+
+        testServerConnection();
+    }, []);
+
     return (
-        <main>
-            {/* Hero Section - Full Width */}
+        <main className="min-h-screen bg-[#FEFBF4]">
             <Hero />
             <ShopByCategory />
             <StyleAndSubstance />
             <TrendingNow />
-            {/* Main Content */}
-
-
 
         </main>
     );

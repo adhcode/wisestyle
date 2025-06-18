@@ -1,199 +1,159 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
-import { useAdmin } from '@/hooks/useAdmin';
-import { useAuthHook } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Search, Trash, Edit, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { ProductService } from '@/services/product.service';
 import { Product } from '@/types/product';
 import { toast } from 'react-hot-toast';
 
 export default function ProductsPage() {
-    const router = useRouter();
-    const { getProducts, deleteProduct } = useAdmin();
-    const { isLoaded, isSignedIn } = useAuthHook();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [retryCount, setRetryCount] = useState(0);
-    const MAX_RETRIES = 3;
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [deleting, setDeleting] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isLoaded) return;
-
-        if (!isSignedIn) {
-            router.push('/sign-in');
-            return;
-        }
-
-        fetchProducts();
-    }, [isLoaded, isSignedIn, router]);
-
-    const fetchProducts = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await getProducts();
-            console.log('Fetched products:', data);
-            setProducts(data);
-            setRetryCount(0); // Reset retry count on success
-        } catch (err) {
-            console.error('Error fetching products:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products. Please try again.';
-            setError(errorMessage);
-            toast.error(errorMessage);
-
-            // Implement retry logic
-            if (retryCount < MAX_RETRIES) {
-                setRetryCount(prev => prev + 1);
-                setTimeout(() => {
-                    fetchProducts();
-                }, 2000 * (retryCount + 1)); // Exponential backoff
+        const fetchProducts = async () => {
+            try {
+                const data = await ProductService.getProducts();
+                setProducts(data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                setLoading(false);
             }
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this product?')) return;
-
-        try {
-            await deleteProduct(id);
-            toast.success('Product deleted successfully');
-            fetchProducts();
-        } catch (err) {
-            toast.error('Failed to delete product');
-            console.error('Error deleting product:', err);
-        }
-    };
-
-    const handleRetry = () => {
-        setRetryCount(0);
         fetchProducts();
-    };
+    }, []);
 
     const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleDelete = async (productId: string) => {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+
+        setDeleting(productId);
+        try {
+            await ProductService.deleteProduct(productId);
+            setProducts(products.filter(p => p.id !== productId));
+            toast.success('Product deleted successfully');
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            toast.error('Failed to delete product');
+        } finally {
+            setDeleting(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="animate-pulse">
+                <div className="h-8 w-1/4 bg-gray-200 rounded mb-6"></div>
+                <div className="space-y-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="flex justify-between items-center mb-8">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-                            <p className="mt-1 text-sm text-gray-500">Manage your store products</p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <Button
-                                onClick={handleRetry}
-                                variant="outline"
-                                className="flex items-center space-x-2"
-                                disabled={loading}
-                            >
-                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                <span>Refresh</span>
-                            </Button>
-                            <Button
-                                onClick={() => router.push('/admin/products/new')}
-                                className="flex items-center space-x-2 bg-black hover:bg-gray-800"
-                            >
-                                <Plus className="h-4 w-4" />
-                                <span>Add Product</span>
-                            </Button>
-                        </div>
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-semibold text-[#3B2305]">Products</h1>
+                <Link
+                    href="/admin/products/new"
+                    className="bg-[#3B2305] text-white px-4 py-2 rounded-md flex items-center hover:bg-[#4c2d08] transition-colors"
+                >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Product
+                </Link>
+            </div>
+
+            <div className="bg-white rounded-lg shadow">
+                <div className="p-4 border-b">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search products..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
+                        />
                     </div>
+                </div>
 
-                    {error && (
-                        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <svg className="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                    </svg>
-                                    {error}
-                                </div>
-                                {retryCount < MAX_RETRIES && (
-                                    <span className="text-sm text-red-500">
-                                        Retrying... ({retryCount + 1}/{MAX_RETRIES})
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="mb-6">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                type="text"
-                                placeholder="Search products..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 w-full"
-                            />
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="flex justify-center items-center h-64">
-                            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-[#F9F5F0] text-[#3B2305]">
+                                <th className="px-4 py-3 text-left">Product</th>
+                                <th className="px-4 py-3 text-left">Category</th>
+                                <th className="px-4 py-3 text-left">Price</th>
+                                <th className="px-4 py-3 text-left">Status</th>
+                                <th className="px-4 py-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
                             {filteredProducts.map((product) => (
-                                <Card key={product.id} className="overflow-hidden">
-                                    <div className="relative aspect-square">
-                                        <Image
-                                            src={product.image || product.images?.[0] || '/placeholder.png'}
-                                            alt={product.name}
-                                            fill
-                                            className="object-cover"
-                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                        />
-                                        <div className="absolute top-2 right-2 flex space-x-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => router.push(`/admin/products/${product.id}/edit`)}
-                                                className="bg-white/80 hover:bg-white"
+                                <tr key={product.id} className="hover:bg-[#FEFBF4]">
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center">
+                                            <div className="h-10 w-10 flex-shrink-0">
+                                                <Image
+                                                    src={product.image || '/images/placeholder.jpg'}
+                                                    alt={product.name}
+                                                    width={40}
+                                                    height={40}
+                                                    className="rounded-md object-cover"
+                                                />
+                                            </div>
+                                            <div className="ml-4">
+                                                <div className="font-medium text-[#3B2305]">{product.name}</div>
+                                                <div className="text-sm text-gray-500">{product.description?.slice(0, 50)}...</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-[#3B2305]">
+                                        {product.category?.name || 'Uncategorized'}
+                                    </td>
+                                    <td className="px-4 py-3 text-[#3B2305]">
+                                        ₦{product.price.toLocaleString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${product.displaySection !== 'NONE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            }`}>
+                                            {product.displaySection !== 'NONE' ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center space-x-3">
+                                            <Link
+                                                href={`/admin/products/${product.id}/edit`}
+                                                className="text-blue-600 hover:text-blue-800"
                                             >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                                <Edit className="w-5 h-5" />
+                                            </Link>
+                                            <button
                                                 onClick={() => handleDelete(product.id)}
-                                                className="bg-white/80 hover:bg-white"
+                                                disabled={deleting === product.id}
+                                                className={`text-red-600 hover:text-red-800 ${deleting === product.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
-                                                <Trash className="h-4 w-4" />
-                                            </Button>
+                                                <Trash2 className={`w-5 h-5 ${deleting === product.id ? 'animate-spin' : ''}`} />
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
-                                        <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-                                            {product.description}
-                                        </p>
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-medium">${product.price}</span>
-                                            <span className="text-sm text-gray-500">
-                                                {product.sizes?.length || 0} sizes • {product.colors?.length || 0} colors
-                                            </span>
-                                        </div>
-                                    </div>
-                                </Card>
+                                    </td>
+                                </tr>
                             ))}
-                        </div>
-                    )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

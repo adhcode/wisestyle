@@ -45,26 +45,35 @@ export class CategoriesService {
 
   async findAll() {
     try {
-      // Try to get from cache first
-      const cachedCategories = await this.redis.get(this.CACHE_KEY) as string;
-      if (cachedCategories) {
+      // Try to get from cache
+      const cachedCategories = await this.redis.get('categories');
+      if (cachedCategories && typeof cachedCategories === 'string') {
         return JSON.parse(cachedCategories);
       }
 
-      // If not in cache, get from database with relationships
+      // Get from database with nested children
       const categories = await this.prisma.category.findMany({
+        where: {
+          isActive: true,
+        },
         include: {
-          parent: true,
-          children: true,
-          products: true,
+          children: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              displayOrder: 'asc',
+            },
+          },
         },
         orderBy: {
           displayOrder: 'asc',
         },
       });
 
-      // Store in cache
-      await this.redis.set(this.CACHE_KEY, JSON.stringify(categories), this.CACHE_TTL);
+      // Cache the results for 1 hour
+      await this.redis.set('categories', JSON.stringify(categories), this.CACHE_TTL);
+
       return categories;
     } catch (error) {
       this.logger.error('Error fetching categories:', error);
@@ -96,12 +105,26 @@ export class CategoriesService {
 
   async findBySlug(slug: string) {
     try {
-      const category = await this.prisma.category.findUnique({
-        where: { slug },
+      // Try to get from cache
+      const cachedCategory = await this.redis.get(`category:${slug}`);
+      if (cachedCategory) {
+        return cachedCategory;
+      }
+
+      const category = await this.prisma.category.findFirst({
+        where: {
+          slug,
+          isActive: true,
+        },
         include: {
-          parent: true,
-          children: true,
-          products: true,
+          children: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              displayOrder: 'asc',
+            },
+          },
         },
       });
 
@@ -109,8 +132,14 @@ export class CategoriesService {
         throw new NotFoundException(`Category with slug ${slug} not found`);
       }
 
+      // Cache the result for 1 hour
+      await this.redis.set(`category:${slug}`, category, this.CACHE_TTL);
+
       return category;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error(`Error fetching category with slug ${slug}:`, error);
       throw error;
     }

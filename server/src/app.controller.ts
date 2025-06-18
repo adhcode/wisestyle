@@ -6,17 +6,20 @@ import { Public } from './decorators/public.decorator';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Public()
   @Get()
   getHello(): string {
     return this.appService.getHello();
   }
 
   @Public()
-  @Get('api/health')
+  @Get('health')
   healthCheck() {
     return {
       status: 'ok',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      uptime: process.uptime()
     };
   }
 } 

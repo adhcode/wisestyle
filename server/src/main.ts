@@ -17,8 +17,13 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const isProduction = configService.get('NODE_ENV') === 'production';
   
+  logger.log(`Starting server in ${isProduction ? 'production' : 'development'} mode`);
+  
   // Security middleware
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+  }));
   
   // Compression middleware
   app.use(compression());
@@ -61,11 +66,16 @@ async function bootstrap() {
     ? ['https://wisestyle.vercel.app']
     : ['http://localhost:3000', 'http://localhost:3001'];
 
+  logger.log(`Configuring CORS with allowed origins: ${allowedOrigins.join(', ')}`);
+
   app.enableCors({
     origin: (origin, callback) => {
+      logger.debug(`Incoming request from origin: ${origin}`);
+      
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        logger.warn(`Blocked request from unauthorized origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -78,7 +88,15 @@ async function bootstrap() {
 
   // Global error handler
   app.use((err: any, req: any, res: any, next: any) => {
-    logger.error('Unhandled error:', err);
+    logger.error('Unhandled error:', {
+      error: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      query: req.query,
+      body: req.body,
+    });
+    
     res.status(500).json({
       statusCode: 500,
       message: 'Internal server error',
@@ -98,5 +116,21 @@ async function bootstrap() {
     logger.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
   });
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  const logger = new Logger('UnhandledRejection');
+  logger.error('Unhandled Rejection at:', {
+    promise,
+    reason,
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  const logger = new Logger('UncaughtException');
+  logger.error('Uncaught Exception:', {
+    error: error.message,
+    stack: error.stack,
+  });
+});
 
 bootstrap(); 

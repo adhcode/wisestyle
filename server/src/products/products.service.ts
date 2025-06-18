@@ -93,7 +93,7 @@ export class ProductsService {
           price,
           originalPrice,
           discount,
-          slug: name.toLowerCase().replace(/\s+/g, '-'),
+          slug: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
           category: {
             connect: { id: categoryId }
           },
@@ -247,43 +247,65 @@ export class ProductsService {
     }
   }
 
-  async findByCategory(category: string) {
+  async findByCategory(slug: string, includeChildren: boolean = false) {
     try {
-      const categoryExists = await this.prisma.category.findFirst({
-        where: { slug: category }
-      });
-
-      if (!categoryExists) {
-        throw new NotFoundException(`Category ${category} not found`);
+      // Try to get from cache first
+      const cacheKey = `products:category:${slug}:${includeChildren}`;
+      const cachedProducts = await this.redisService.get(cacheKey);
+      if (cachedProducts) {
+        return cachedProducts;
       }
 
-      return this.prisma.product.findMany({
+      // Get the category and its children if needed
+      const category = await this.prisma.category.findFirst({
+        where: { slug },
+        include: {
+          children: includeChildren,
+        },
+      });
+
+      if (!category) {
+        throw new NotFoundException(`Category with slug ${slug} not found`);
+      }
+
+      // Build category IDs to search for
+      const categoryIds = [category.id];
+      if (includeChildren && category.children) {
+        categoryIds.push(...category.children.map(child => child.id));
+      }
+
+      // Get products for the category and its children
+      const products = await this.prisma.product.findMany({
         where: {
-          category: {
-            slug: category
-          }
+          categoryId: {
+            in: categoryIds,
+          },
+          isActive: true,
         },
         include: {
           category: true,
           sizes: true,
           colors: true,
-          images: true,
           inventory: {
             include: {
               size: true,
-              color: true
-            }
-          }
+              color: true,
+            },
+          },
+          images: true,
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       });
+
+      // Cache the results
+      await this.redisService.set(cacheKey, products, 3600); // Cache for 1 hour
+
+      return products;
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new BadRequestException('Error fetching products by category');
+      this.logger.error(`Error fetching products for category ${slug}:`, error);
+      throw error;
     }
   }
 
@@ -406,6 +428,7 @@ export class ProductsService {
           price,
           originalPrice,
           discount,
+          slug: name ? `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}` : undefined,
           category: categoryId ? {
             connect: { id: categoryId }
           } : undefined,
@@ -587,18 +610,34 @@ export class ProductsService {
   }
 
   async getHomepageSections(): Promise<HomepageSection[]> {
-    const cachedSections = await this.redisService.get<HomepageSection[]>('homepage_sections');
-    if (cachedSections) {
-      return cachedSections;
-    }
+    // Clear any stale cache
+    await this.redisService.del('homepage_sections');
+    this.logger.debug('Fetching homepage sections...');
 
-    // Get products from database
+    // Get products from database with all necessary relations
     const products = await this.prisma.product.findMany({
       include: {
         images: true,
-        category: true
+        category: true,
+        sizes: true,
+        colors: true,
+        inventory: {
+          include: {
+            size: true,
+            color: true
+          }
+        }
+      },
+      where: {
+        OR: [
+          { displaySection: DisplaySection.NEW_ARRIVAL },
+          { displaySection: DisplaySection.TRENDING },
+          { isLimited: true }
+        ]
       }
     });
+
+    this.logger.debug(`Found ${products.length} products`);
 
     // Map products to Product interface
     const mappedProducts = products.map(product => ({
@@ -627,6 +666,8 @@ export class ProductsService {
       }
     ];
 
+    this.logger.debug('Homepage sections:', sections);
+
     // Cache the results for 1 hour
     await this.redisService.set('homepage_sections', sections, 3600);
     return sections;
@@ -644,17 +685,13 @@ export class ProductsService {
         throw new NotFoundException('Product not found');
       }
 
-      // Find related products based on category and tags
+      // Find "cool with" products from OTHER categories (different from current product)
       const relatedProducts = await this.prisma.product.findMany({
         where: {
           AND: [
             { id: { not: productId } }, // Exclude current product
-            {
-              OR: [
-                { categoryId: currentProduct.categoryId }, // Same category
-                { tags: { hasSome: currentProduct.tags } } // Shared tags
-              ]
-            }
+            { categoryId: { not: currentProduct.categoryId } }, // Different category
+            { isActive: true }
           ]
         },
         include: {
@@ -679,6 +716,72 @@ export class ProductsService {
     } catch (error) {
       this.logger.error(`Error getting related products: ${error.message}`);
       throw new BadRequestException('Error fetching related products');
+    }
+  }
+
+  async findByCategorySlug(slug: string, includeChildren: boolean = false) {
+    try {
+      // First, find the category by slug
+      const category = await this.prisma.category.findFirst({
+        where: { slug, isActive: true },
+        include: {
+          children: {
+            where: { isActive: true },
+            select: { id: true }
+          },
+          parent: {
+            where: { isActive: true },
+            select: { id: true }
+          }
+        }
+      });
+
+      if (!category) {
+        throw new NotFoundException(`Category with slug ${slug} not found`);
+      }
+
+      // Get all category IDs to search for
+      const categoryIds = [category.id];
+      
+      // Include parent's products if this is a child category
+      if (category.parent) {
+        categoryIds.push(category.parent.id);
+      }
+      
+      // Include children's products if requested
+      if (includeChildren && category.children.length > 0) {
+        categoryIds.push(...category.children.map(child => child.id));
+      }
+
+      // Find all products in the category and its children
+      const products = await this.prisma.product.findMany({
+        where: {
+          isActive: true,
+          categoryId: {
+            in: categoryIds
+          }
+        },
+        include: {
+          category: true,
+          sizes: true,
+          colors: true,
+          images: true,
+          inventory: {
+            include: {
+              size: true,
+              color: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return products;
+    } catch (error) {
+      this.logger.error(`Error finding products by category slug ${slug}:`, error);
+      throw error;
     }
   }
 } 
