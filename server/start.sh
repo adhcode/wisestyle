@@ -1,4 +1,9 @@
 #!/bin/sh
+set -e
+
+echo "Current user: $(whoami)"
+echo "Working dir: $(pwd)"
+ls -al
 
 echo "Running database migrations..."
 npx prisma migrate deploy

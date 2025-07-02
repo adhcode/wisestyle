@@ -22,10 +22,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY start.sh ./start.sh
-RUN chmod +x ./start.sh
-
-# Use a non-root user for security (optional) --------------------------------
-USER nodelag
+RUN chmod 755 ./start.sh
 
 # Expose port Railway (and dev) expect ---------------------------------------
 EXPOSE 3001
