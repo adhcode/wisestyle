@@ -21,6 +21,7 @@ WORKDIR /usr/src/app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package*.json ./
 COPY start.sh ./start.sh
 RUN chmod 755 ./start.sh
 
