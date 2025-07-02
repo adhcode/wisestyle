@@ -1,6 +1,3 @@
-[build]
-builder = "docker"
-
 [deploy]
 startCommand = ""
 healthcheckPath = "/health"
