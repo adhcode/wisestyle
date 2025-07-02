@@ -1,31 +1,37 @@
-# Use Node.js 18 Alpine as the base image
-FROM node:18-alpine
+########## 1️⃣  Build stage ####################################################
+FROM node:18-alpine AS builder
+WORKDIR /app
 
-# Set working directory
-WORKDIR /usr/src/app
-
-# Copy package files
+# Install full deps (includes dev) -------------------------------------------
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY prisma ./prisma
+RUN npm ci --legacy-peer-deps
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
-
-# Copy source code and start script
-COPY . .
-COPY start.sh /usr/src/app/start.sh
-
-# Generate Prisma client
+# Generate Prisma client & build NestJS --------------------------------------
 RUN npx prisma generate
-
-# Build the application
+COPY . .
 RUN npm run build
 
-# Make start script executable
-RUN chmod +x /usr/src/app/start.sh
+# Remove dev-only deps so next stage copies a lean node_modules --------------
+RUN npm prune --omit=dev
 
-# Expose the port
+
+########## 2️⃣  Runtime stage ##################################################
+FROM node:18-alpine
+WORKDIR /usr/src/app
+
+# Copy production node_modules, dist, prisma, and start script ---------------
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Use a non-root user for security (optional) --------------------------------
+USER node
+
+# Expose port Railway (and dev) expect ---------------------------------------
 EXPOSE 3001
 
-# Start the application
-CMD ["/usr/src/app/start.sh"] 
+# Launch ---------------------------------------------------------------------
+CMD ["./start.sh"] 
