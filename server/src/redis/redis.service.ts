@@ -12,8 +12,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     constructor(private configService: ConfigService) {
         const redisUrl = this.configService.get<string>('REDIS_URL');
+
+        // If no REDIS_URL is supplied disable Redis features gracefully.
         if (!redisUrl) {
-            throw new Error('REDIS_URL is not defined in environment variables');
+            this.logger.warn('REDIS_URL not provided – Redis cache disabled.');
+            // Mark service as disabled; all public methods will become no-ops.
+            this.isConnected = false;
+            // Assign a non-functional placeholder to keep typings happy.
+            this.redis = null as any;
+            return;
         }
 
         this.redis = new Redis(redisUrl, {
@@ -23,8 +30,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                 return delay;
             },
             tls: {
-                rejectUnauthorized: false
-            }
+                rejectUnauthorized: false,
+            },
         });
 
         this.setupEventHandlers();
@@ -60,15 +67,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async onModuleInit() {
+        // Skip initialization when redis is disabled
+        if (!this.redis) {
+            return;
+        }
+
         try {
             this.startHealthCheck();
         } catch (error) {
             this.logger.error('Failed to initialize Redis:', error);
-            throw error;
+            // Don't crash the app – just keep Redis disabled
         }
     }
 
     async onModuleDestroy() {
+        if (!this.redis) return;
+
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
         }
@@ -76,6 +90,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async set(key: string, value: any, ttl?: number): Promise<void> {
+        if (!this.redis) return;
         try {
             const stringValue = JSON.stringify(value);
             if (ttl) {
@@ -89,6 +104,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async get<T>(key: string): Promise<T | null> {
+        if (!this.redis) return null;
         try {
             const value = await this.redis.get(key);
             return value ? JSON.parse(value) : null;
@@ -99,6 +115,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async del(key: string): Promise<void> {
+        if (!this.redis) return;
         try {
             await this.redis.del(key);
         } catch (error) {
@@ -107,6 +124,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async flush(): Promise<void> {
+        if (!this.redis) return;
         try {
             await this.redis.flushall();
         } catch (error) {
@@ -202,6 +220,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     async ping(): Promise<boolean> {
+        if (!this.redis) return false;
         try {
             const result = await this.redis.ping();
             return result === 'PONG';

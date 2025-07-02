@@ -15,6 +15,7 @@ import { UsersModule } from './users/users.module';
 import { UploadModule } from './upload/upload.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { PaymentModule } from './payment/payment.module';
+import { HealthModule } from './health/health.module';
 import * as Joi from 'joi';
 import { join } from 'path';
 
@@ -46,7 +47,7 @@ import { join } from 'path';
                     .default('development'),
                 PORT: Joi.number().default(3001),
                 DATABASE_URL: Joi.string().required(),
-                REDIS_URL: Joi.string().required(),
+                REDIS_URL: Joi.string().optional(),
                 JWT_SECRET: Joi.string().required(),
                 JWT_EXPIRATION: Joi.string().default('24h'),
                 FRONTEND_URL: Joi.string().default('https://wisestyle.vercel.app'),
@@ -67,6 +68,7 @@ import { join } from 'path';
         UploadModule,
         CloudinaryModule,
         PaymentModule,
+        HealthModule,
     ],
     providers: [
         {

@@ -58,8 +58,10 @@ async function bootstrap() {
     immutable: true,
   });
 
-  // Set global prefix for API routes
-  app.setGlobalPrefix('api');
+  // Set global prefix for API routes, but exclude healthcheck
+  app.setGlobalPrefix('api', {
+    exclude: ['health'],
+  });
 
   // CORS configuration
   const defaultProdOrigin = 'https://wisestyle.vercel.app';

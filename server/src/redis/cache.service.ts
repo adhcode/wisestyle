@@ -4,13 +4,27 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CacheService {
-  private readonly redis: Redis;
+  private readonly redis: Redis | null = null;
   private readonly logger = new Logger(CacheService.name);
   private readonly defaultTTL = 3600; // 1 hour in seconds
+  private isEnabled = false;
 
   constructor(private configService: ConfigService) {
-    this.redis = new Redis(this.configService.get('REDIS_URL'));
-    
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+
+    if (!redisUrl) {
+      this.logger.warn('REDIS_URL not provided – CacheService disabled.');
+      return;
+    }
+
+    this.redis = new Redis(redisUrl, {
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    this.isEnabled = true; // enable cache operations
+
     this.redis.on('error', (error) => {
       this.logger.error('Redis connection error:', error);
     });
@@ -21,6 +35,8 @@ export class CacheService {
   }
 
   async get<T>(key: string): Promise<T | null> {
+    if (!this.isEnabled || !this.redis) return null;
+
     try {
       const data = await this.redis.get(key);
       return data ? JSON.parse(data) : null;
@@ -31,6 +47,8 @@ export class CacheService {
   }
 
   async set(key: string, value: any, ttl: number = this.defaultTTL): Promise<void> {
+    if (!this.isEnabled || !this.redis) return;
+
     try {
       const stringValue = JSON.stringify(value);
       await this.redis.set(key, stringValue, 'EX', ttl);
@@ -40,6 +58,8 @@ export class CacheService {
   }
 
   async del(key: string): Promise<void> {
+    if (!this.isEnabled || !this.redis) return;
+
     try {
       await this.redis.del(key);
     } catch (error) {
@@ -48,6 +68,8 @@ export class CacheService {
   }
 
   async invalidatePattern(pattern: string): Promise<void> {
+    if (!this.isEnabled || !this.redis) return;
+
     try {
       const keys = await this.redis.keys(pattern);
       if (keys.length > 0) {
@@ -62,4 +84,4 @@ export class CacheService {
   generateKey(prefix: string, ...args: any[]): string {
     return `${prefix}:${args.join(':')}`;
   }
-} 
+}
