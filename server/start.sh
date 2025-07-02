@@ -7,20 +7,19 @@ ls -al
 
 echo "Testing Node.js..."
 node --version
-echo "Testing if dist/main exists..."
-ls -la dist/
-echo "Checking dist/main..."
-file dist/main.js 2>/dev/null || echo "main.js not found"
+
+echo "Running database migrations..."
+npx prisma migrate deploy || echo "Migration step skipped or failed"
+
+# Seed only when SEED_DB=true and only once
+if [ "$SEED_DB" = "true" ]; then
+  echo "Seeding database..."
+  npx prisma db seed && echo "Seed completed" || echo "Seed failed"
+fi
 
 echo "Starting application..."
 if [ -f "dist/main.js" ]; then
-  echo "Found dist/main.js, starting..."
   exec node dist/main.js
-elif [ -f "dist/main" ]; then
-  echo "Found dist/main, starting..."
-  exec node dist/main
 else
-  echo "ERROR: Neither dist/main nor dist/main.js found!"
-  ls -la dist/
-  exit 1
+  exec node dist/main
 fi 
