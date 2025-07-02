@@ -29,4 +29,4 @@ RUN chmod 755 ./start.sh
 EXPOSE 3001
 
 # Launch ---------------------------------------------------------------------
-CMD ["./start.sh"]
+CMD ["sh", "-c", "echo 'Container starting...' && echo 'Current dir:' && pwd && echo 'Files:' && ls -la && echo 'Dist contents:' && ls -la dist/ && echo 'Starting Node...' && node dist/main.js"]
