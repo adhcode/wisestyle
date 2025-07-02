@@ -12,9 +12,6 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
-# Remove dev-only deps so next stage copies a lean node_modules --------------
-RUN npm prune --omit=dev
-
 
 ########## 2️⃣  Runtime stage ##################################################
 FROM node:18-alpine
@@ -28,7 +25,7 @@ COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 # Use a non-root user for security (optional) --------------------------------
-USER node
+USER nodelag
 
 # Expose port Railway (and dev) expect ---------------------------------------
 EXPOSE 3001
