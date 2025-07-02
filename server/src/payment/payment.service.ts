@@ -45,12 +45,13 @@ export class PaymentService {
     ) {
         const publicKey = this.configService.get('FLUTTERWAVE_PUBLIC_KEY');
         const secretKey = this.configService.get('FLUTTERWAVE_SECRET_KEY');
-        
-        if (!publicKey || !secretKey) {
-            throw new Error('Flutterwave API keys are not configured');
-        }
 
-        this.flutterwave = new Flutterwave(publicKey, secretKey);
+        if (!publicKey || !secretKey) {
+            this.logger.warn('Flutterwave API keys not provided – Flutterwave payments disabled.');
+            this.flutterwave = null; // disable feature
+        } else {
+            this.flutterwave = new Flutterwave(publicKey, secretKey);
+        }
         this.paystackSecretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY') || '';
         this.paystackBaseUrl = this.configService.get<string>('PAYSTACK_BASE_URL') || 'https://api.paystack.co';
     }
@@ -142,6 +143,9 @@ export class PaymentService {
     }
 
     async initializeFlutterwavePayment(orderId: string, amount: number, email: string, paymentMethod: 'card' | 'bank_transfer' | 'ng' = 'card') {
+        if (!this.flutterwave) {
+            throw new BadRequestException('Flutterwave payments are disabled on this server');
+        }
         try {
             const order = await this.ordersService.findOne(orderId);
             if (!order) {
@@ -258,6 +262,9 @@ export class PaymentService {
     }
 
     async verifyFlutterwavePayment(transactionId: string) {
+        if (!this.flutterwave) {
+            throw new BadRequestException('Flutterwave payments are disabled on this server');
+        }
         try {
             const response = await this.flutterwave.Transaction.verify({ id: transactionId });
             
@@ -345,6 +352,7 @@ export class PaymentService {
     }
 
     async handleFlutterwaveWebhook(webhookData: FlutterwaveWebhookDto, hash: string) {
+        if (!this.flutterwave) return;
         try {
             // Verify webhook hash
             const secretHash = this.configService.get('FLUTTERWAVE_SECRET_HASH');
