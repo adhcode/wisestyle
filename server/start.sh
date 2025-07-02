@@ -15,4 +15,4 @@ if [ "$SEED_DB" = "true" ]; then
 fi
 
 echo "Starting application..."
-exec npm run start:prod 
+exec node dist/main 
