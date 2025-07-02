@@ -5,7 +5,7 @@ WORKDIR /app
 # Install full deps (includes dev) -------------------------------------------
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Generate Prisma client & build NestJS --------------------------------------
 RUN npx prisma generate
