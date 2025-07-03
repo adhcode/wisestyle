@@ -8,6 +8,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
+        outfit: ["Outfit", "sans-serif"],
+        lato: ["Lato", "sans-serif"],
         lora: ["var(--font-lora)", "serif"],
       },
       keyframes: {

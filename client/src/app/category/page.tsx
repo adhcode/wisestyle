@@ -175,12 +175,12 @@ export default function CategoriesPage() {
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
-                                                toggleLike(Number(category.id));
+                                                toggleLike(category.id);
                                             }}
                                             className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                         >
                                             <Heart
-                                                className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(Number(category.id))
+                                                className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(category.id)
                                                     ? 'fill-red-500 stroke-red-500'
                                                     : 'stroke-gray-600'
                                                     }`}

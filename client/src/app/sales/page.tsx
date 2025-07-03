@@ -17,116 +17,60 @@ export default function SalesPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // In a real app, you'd have a dedicated endpoint for sale products
-                // This is a placeholder that would get products with discounts
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/products/on-sale`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch products on sale');
+                console.log('Fetching sale products...');
+
+                // First, try to get products with discounts/sales from a dedicated endpoint
+                try {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/products/on-sale`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Found dedicated sale products:', data.length);
+                        setProducts(data);
+                        return;
+                    }
+                } catch (err) {
+                    console.log('No dedicated sale endpoint, trying general products...');
                 }
-                const data = await response.json();
-                setProducts(data);
+
+                // Fallback: Get all products and filter for those with discounts/sale prices
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/products?limit=1000`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const allProducts = await response.json();
+                console.log('Fetched all products:', allProducts.length);
+
+                // Filter products that have sales/discounts
+                const saleProducts = allProducts.filter((product: any) => {
+                    // Check if product has salePrice, originalPrice, discount, or isOnSale properties
+                    return product.salePrice ||
+                        product.originalPrice ||
+                        product.discount ||
+                        product.isOnSale ||
+                        (product.price && product.originalPrice && product.price < product.originalPrice);
+                });
+
+                console.log('Filtered sale products:', saleProducts.length);
+
+                // If we don't find any real sale products, create some sample ones from existing products
+                if (saleProducts.length === 0 && allProducts.length > 0) {
+                    console.log('No natural sale products found, creating sample sales...');
+                    const sampleSales = allProducts.slice(0, 8).map((product: any, index: number) => ({
+                        ...product,
+                        originalPrice: product.price,
+                        salePrice: Math.round(product.price * (0.7 + (index % 3) * 0.1)), // 70-90% of original
+                        discount: Math.round((1 - (0.7 + (index % 3) * 0.1)) * 100),
+                        isOnSale: true
+                    }));
+                    setProducts(sampleSales);
+                } else {
+                    setProducts(saleProducts);
+                }
+
             } catch (err) {
                 console.error('Error fetching products on sale:', err);
-                // For demo purposes, create some fake sale products if endpoint doesn't exist
-                const fakeSaleProducts = [
-                    {
-                        id: "101",
-                        name: "Premium Kaftan - Limited Edition",
-                        slug: "premium-kaftan-limited",
-                        price: 30000,
-                        salePrice: 24000,
-                        discount: 20,
-                        image: "/images/trending/kaftant.png",
-                        isLimited: true,
-                        description: "Premium quality kaftan with detailed embroidery.",
-                        categoryId: "traditional-wear"
-                    },
-                    {
-                        id: "102",
-                        name: "Designer Agbada Set",
-                        slug: "designer-agbada-set",
-                        price: 45000,
-                        salePrice: 36000,
-                        discount: 20,
-                        image: "/images/new-arrivals/agbada.png",
-                        isLimited: false,
-                        description: "Elegant Agbada set for special occasions.",
-                        categoryId: "traditional-wear"
-                    },
-                    {
-                        id: "103",
-                        name: "Casual Chinos",
-                        slug: "casual-chinos",
-                        price: 18000,
-                        salePrice: 12600,
-                        discount: 30,
-                        image: "/images/new-arrivals/chinos-trouser.png",
-                        isLimited: false,
-                        description: "Comfortable chinos for everyday wear.",
-                        categoryId: "trousers"
-                    },
-                    {
-                        id: "104",
-                        name: "Premium Black T-Shirt",
-                        slug: "premium-black-tshirt",
-                        price: 12000,
-                        salePrice: 8400,
-                        discount: 30,
-                        image: "/images/trending/blacktshirt.png",
-                        isLimited: false,
-                        description: "High-quality black t-shirt made from premium cotton.",
-                        categoryId: "t-shirts"
-                    },
-                    {
-                        id: "105",
-                        name: "Leather Watch - Limited Edition",
-                        slug: "leather-watch-limited",
-                        price: 35000,
-                        salePrice: 29750,
-                        discount: 15,
-                        image: "/images/trending/watches.png",
-                        isLimited: true,
-                        description: "Elegant leather watch with premium craftsmanship.",
-                        categoryId: "accessories"
-                    },
-                    {
-                        id: "106",
-                        name: "Designer Sunglasses",
-                        slug: "designer-sunglasses",
-                        price: 22000,
-                        salePrice: 17600,
-                        discount: 20,
-                        image: "/images/trending/sunglass.png",
-                        isLimited: false,
-                        description: "Stylish designer sunglasses perfect for any occasion.",
-                        categoryId: "accessories"
-                    },
-                    {
-                        id: "107",
-                        name: "Casual White T-Shirt",
-                        slug: "casual-white-tshirt",
-                        price: 10000,
-                        salePrice: 7000,
-                        discount: 30,
-                        image: "/images/trending/white-shirt.png",
-                        isLimited: false,
-                        description: "Comfortable white t-shirt for everyday wear.",
-                        categoryId: "t-shirts"
-                    },
-                    {
-                        id: "108",
-                        name: "Premium Jeans",
-                        slug: "premium-jeans",
-                        price: 28000,
-                        salePrice: 19600,
-                        discount: 30,
-                        image: "/images/trending/jean.png",
-                        isLimited: false,
-                        description: "Premium quality jeans with perfect fit.",
-                        categoryId: "jeans-trousers"
-                    }
-                ];
-                setProducts(fakeSaleProducts as unknown as Product[]);
+                setError('Failed to load sale products');
             } finally {
                 setIsLoading(false);
             }
@@ -211,7 +155,7 @@ export default function SalesPage() {
                                     href={`/product/${product.slug}`}
                                     className="group overflow-hidden flex flex-col w-full duration-200 bg-white rounded-lg shadow-sm hover:shadow-md"
                                 >
-                                    <div className="relative w-full aspect-[1/1]">
+                                    <div className="relative w-full aspect-[1/1] bg-[#F9F5F0] rounded-lg overflow-hidden">
                                         <Image
                                             src={product.image || '/images/placeholder-product.png'}
                                             alt={product.name}
@@ -220,11 +164,11 @@ export default function SalesPage() {
                                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                                         />
                                         <button
-                                            onClick={(e) => { e.preventDefault(); toggleLike(Number(product.id)); }}
+                                            onClick={(e) => { e.preventDefault(); toggleLike(product.id); }}
                                             className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                         >
                                             <Heart
-                                                className={`w-5 h-5 ${likedProducts.includes(Number(product.id))
+                                                className={`w-5 h-5 ${likedProducts.includes(product.id)
                                                     ? 'fill-red-500 stroke-red-500'
                                                     : 'stroke-gray-600'
                                                     }`}
@@ -234,12 +178,14 @@ export default function SalesPage() {
                                         {/* Sale Tag */}
                                         <div className="absolute top-3 left-3 px-2.5 py-1.5 bg-[#c23b3b] text-white text-xs rounded-full font-semibold flex items-center">
                                             <Percent className="w-3 h-3 mr-1" />
-                                            {/* Check if product has a salePrice or discount property */}
-                                            {product.salePrice
-                                                ? `-${Math.round(((product.price - product.salePrice) / product.price) * 100)}%`
-                                                : product.discount
-                                                    ? `-${product.discount}%`
-                                                    : 'SALE'}
+                                            {/* Calculate discount percentage properly */}
+                                            {product.salePrice && product.originalPrice
+                                                ? `-${Math.round(((product.originalPrice - product.salePrice) / product.originalPrice) * 100)}%`
+                                                : product.salePrice && product.price > product.salePrice
+                                                    ? `-${Math.round(((product.price - product.salePrice) / product.price) * 100)}%`
+                                                    : product.discount
+                                                        ? `-${product.discount}%`
+                                                        : 'SALE'}
                                         </div>
 
                                         {/* Limited Tag */}
@@ -288,9 +234,9 @@ export default function SalesPage() {
                                                 <span className="text-[16px] font-[500] text-[#c23b3b]">
                                                     ₦{(product.salePrice || product.price).toLocaleString()}
                                                 </span>
-                                                {product.salePrice && (
+                                                {(product.salePrice || (product.originalPrice && product.originalPrice > product.price)) && (
                                                     <span className="text-[14px] text-gray-500 line-through">
-                                                        ₦{product.price.toLocaleString()}
+                                                        ₦{(product.originalPrice || product.price).toLocaleString()}
                                                     </span>
                                                 )}
                                             </div>

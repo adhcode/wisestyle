@@ -4,14 +4,14 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { apiClient } from '@/utils/api-client';
 
 interface LikesState {
-    likedProducts: number[];
+    likedProducts: string[];
     initialized: boolean;
 }
 
 type LikesAction =
-    | { type: 'INIT_LIKES'; payload: number[] }
-    | { type: 'ADD_LIKE'; payload: number }
-    | { type: 'REMOVE_LIKE'; payload: number };
+    | { type: 'INIT_LIKES'; payload: string[] }
+    | { type: 'ADD_LIKE'; payload: string }
+    | { type: 'REMOVE_LIKE'; payload: string };
 
 const initialState: LikesState = {
     likedProducts: [],
@@ -20,8 +20,8 @@ const initialState: LikesState = {
 
 const LikesContext = createContext<{
     state: LikesState;
-    toggleLike: (productId: number) => Promise<void>;
-    isLiked: (productId: number) => boolean;
+    toggleLike: (productId: string) => Promise<void>;
+    isLiked: (productId: string) => boolean;
 }>({
     state: initialState,
     toggleLike: async () => { },
@@ -54,9 +54,12 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const initializeLikes = async () => {
             try {
                 // Try to get liked products from localStorage first (guest user)
-                const storedLikes = localStorage.getItem('likedProducts');
+                const storedLikes = localStorage.getItem('wisestyle_likedProducts');
                 if (storedLikes) {
-                    dispatch({ type: 'INIT_LIKES', payload: JSON.parse(storedLikes) });
+                    const parsed = JSON.parse(storedLikes);
+                    // Ensure all IDs are strings
+                    const stringIds = Array.isArray(parsed) ? parsed.map(id => String(id)) : [];
+                    dispatch({ type: 'INIT_LIKES', payload: stringIds });
                 } else {
                     // Default to empty array if nothing found
                     dispatch({ type: 'INIT_LIKES', payload: [] });
@@ -66,9 +69,11 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const token = localStorage.getItem('token');
                 if (token) {
                     try {
-                        const userLikes = await apiClient.get<{ products: number[] }>('/api/user/likes', true, undefined, 'User likes');
+                        const userLikes = await apiClient.get<{ products: string[] }>('/api/user/likes', true, undefined, 'User likes');
                         if (userLikes?.products) {
-                            dispatch({ type: 'INIT_LIKES', payload: userLikes.products });
+                            // Ensure all IDs are strings
+                            const stringIds = userLikes.products.map(id => String(id));
+                            dispatch({ type: 'INIT_LIKES', payload: stringIds });
                         }
                     } catch (error) {
                         // If the API call fails, we'll keep using the localStorage likes
@@ -88,11 +93,11 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Sync with localStorage whenever state changes
     useEffect(() => {
         if (state.initialized) {
-            localStorage.setItem('likedProducts', JSON.stringify(state.likedProducts));
+            localStorage.setItem('wisestyle_likedProducts', JSON.stringify(state.likedProducts));
         }
     }, [state.likedProducts, state.initialized]);
 
-    const toggleLike = async (productId: number): Promise<void> => {
+    const toggleLike = async (productId: string): Promise<void> => {
         const token = localStorage.getItem('token');
         const isCurrentlyLiked = state.likedProducts.includes(productId);
 
@@ -124,7 +129,7 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     };
 
-    const isLiked = (productId: number): boolean => {
+    const isLiked = (productId: string): boolean => {
         return state.likedProducts.includes(productId);
     };
 

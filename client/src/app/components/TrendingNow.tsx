@@ -51,15 +51,10 @@ export default function TrendingNow() {
         setSelectedProduct(null);
     };
 
-    const handleToggleLike = async (id: number) => {
+    const handleToggleLike = async (productId: string) => {
         try {
-            setRateLimitError(null);
-            await toggleLike(id);
+            await toggleLike(productId);
         } catch (error) {
-            if (error instanceof RateLimitError) {
-                setRateLimitError(`${error.message}. Please try again in ${Math.ceil(error.retryAfter)} seconds.`);
-                setTimeout(() => setRateLimitError(null), error.retryAfter * 1000);
-            }
             console.error('Error toggling like:', error);
         }
     };
@@ -105,7 +100,7 @@ export default function TrendingNow() {
                             href={`/product/${product.slug}`}
                             className="group overflow-hidden flex flex-col w-full duration-200"
                         >
-                            <div className="relative w-full aspect-[1/1]">
+                            <div className="relative w-full aspect-[1/1] bg-[#F9F5F0] rounded-lg overflow-hidden">
                                 <Image
                                     src={product.image || '/images/placeholder.jpg'}
                                     alt={product.name}
@@ -116,12 +111,12 @@ export default function TrendingNow() {
                                 <button
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        handleToggleLike(Number(product.id));
+                                        handleToggleLike(product.id);
                                     }}
                                     className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                 >
                                     <Heart
-                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(Number(product.id))
+                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(product.id)
                                             ? 'fill-red-500 stroke-red-500'
                                             : 'stroke-gray-600'
                                             }`}

@@ -18,6 +18,7 @@ interface CartContextType {
     clearCart: () => void;
     isOpen: boolean;
     toggleCart: () => void;
+    isLoaded: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -25,43 +26,46 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
     const [isOpen, setIsOpen] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     // Calculate total items and price whenever items change
     const totalItems = items.reduce((total, item) => total + item.quantity, 0);
     const totalPrice = items.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-    // Check cart expiry on mount
+    // Load cart from localStorage on mount
     useEffect(() => {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+
         try {
-            const savedCart = localStorage.getItem('cart');
-            const cartAddedAt = localStorage.getItem('cartAddedAt');
-            if (cartAddedAt && Date.now() - Number(cartAddedAt) > 60 * 60 * 1000) {
-                // More than 1 hour has passed, clear cart
-                localStorage.removeItem('cart');
-                localStorage.removeItem('cartAddedAt');
-                setItems([]);
-            } else if (savedCart) {
-                setItems(JSON.parse(savedCart));
+            const savedCart = localStorage.getItem('wisestyle_cart');
+            if (savedCart) {
+                const parsedCart = JSON.parse(savedCart);
+                // Validate that it's an array of valid items
+                if (Array.isArray(parsedCart)) {
+                    setItems(parsedCart);
+                }
             }
         } catch (error) {
             console.error('Error loading cart:', error);
+            // Clear corrupted cart data
+            localStorage.removeItem('wisestyle_cart');
+        } finally {
+            setIsLoaded(true);
         }
     }, []);
 
-    // Save cart to localStorage whenever it changes
+    // Save cart to localStorage whenever it changes (but only after initial load)
     useEffect(() => {
+        // Only run on client side and after initial load
+        if (typeof window === 'undefined' || !isLoaded) return;
+
         try {
-            localStorage.setItem('cart', JSON.stringify(items));
-            if (items.length > 0 && !localStorage.getItem('cartAddedAt')) {
-                localStorage.setItem('cartAddedAt', Date.now().toString());
-            }
-            if (items.length === 0) {
-                localStorage.removeItem('cartAddedAt');
-            }
+            localStorage.setItem('wisestyle_cart', JSON.stringify(items));
         } catch (error) {
             console.error('Error saving cart:', error);
         }
-    }, [items]);
+    }, [items, isLoaded]);
 
     const addItem = (item: CartItem, options?: { skipToast?: boolean }) => {
         setItems(prevItems => {
@@ -81,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
 
         if (!options?.skipToast) {
-            toast.success("It's in the bag! We'll hold it for 1 hour.", {
+            toast.success("Added to cart successfully!", {
                 position: 'bottom-center',
                 style: {
                     borderRadius: '10px',
@@ -114,6 +118,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     const updateQuantity = (id: string, quantity: number) => {
+        if (quantity <= 0) {
+            removeItem(id);
+            return;
+        }
+
         setItems(prevItems =>
             prevItems.map(item =>
                 item.id === id ? { ...item, quantity } : item
@@ -149,6 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 clearCart,
                 isOpen,
                 toggleCart,
+                isLoaded,
             }}
         >
             {children}

@@ -1,6 +1,15 @@
 // client/next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Don't fail build on these specific page errors
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  // Configure static page generation
+  trailingSlash: false,
   images: {
     remotePatterns: [
       {
@@ -14,6 +23,9 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+  },
+  async generateBuildId() {
+    return "wisestyle-build";
   },
   async rewrites() {
     return [

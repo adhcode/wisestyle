@@ -88,13 +88,13 @@ export default function NewArrivals() {
                     className="group relative block bg-white overflow-hidden"
                 >
                     {/* Product Image */}
-                    <div className="relative w-full pb-[125%] bg-gray-100 rounded-lg overflow-hidden">
+                    <div className="relative w-full pb-[125%] bg-[#F9F5F0] rounded-lg overflow-hidden">
                         <Image
                             src={product.image || product.images?.[0] || '/placeholder-product.png'}
                             alt={product.name}
                             fill
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                             priority
                         />
                     </div>

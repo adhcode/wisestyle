@@ -62,24 +62,13 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
     }, [products, sortBy]);
 
     // Handle likes with rate limit protection
-    const handleToggleLike = useCallback(async (productId: number) => {
+    const handleToggleLike = async (productId: string) => {
         try {
-            setRateLimitError(null);
-            debounce(async () => {
-                try {
-                    await toggleLike(productId);
-                } catch (error: any) {
-                    if (error.retryAfter) {
-                        setRateLimitError(`${error.message}. Please try again in ${Math.ceil(error.retryAfter)} seconds.`);
-                        setTimeout(() => setRateLimitError(null), error.retryAfter * 1000);
-                    }
-                    console.error('Error toggling like:', error);
-                }
-            }, 300);
+            await toggleLike(productId);
         } catch (error) {
-            console.error('Error in handleToggleLike:', error);
+            console.error('Error toggling like:', error);
         }
-    }, [toggleLike, debounce]);
+    };
 
     const handleAddToCart = (product: Product) => {
         const cartItem: CartItem = {
@@ -222,12 +211,12 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    handleToggleLike(Number(product.id));
+                                                    handleToggleLike(product.id);
                                                 }}
                                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                             >
                                                 <Heart
-                                                    className={`w-4 h-4 ${likedProducts.includes(Number(product.id))
+                                                    className={`w-4 h-4 ${likedProducts.includes(product.id)
                                                         ? 'fill-red-500 stroke-red-500'
                                                         : 'stroke-gray-600'
                                                         }`}
@@ -247,12 +236,12 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    handleToggleLike(Number(product.id));
+                                                    handleToggleLike(product.id);
                                                 }}
                                                 className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10 hover:scale-110 transition-transform"
                                             >
                                                 <Heart
-                                                    className={`w-5 h-5 ${likedProducts.includes(Number(product.id))
+                                                    className={`w-5 h-5 ${likedProducts.includes(product.id)
                                                         ? 'fill-red-500 stroke-red-500'
                                                         : 'stroke-gray-600'
                                                         }`}

@@ -385,8 +385,8 @@ export class ProductsService {
         categoryId,
         image,
         images,
-        sizes,
-        colors,
+        sizes: sizeValues,
+        colors: colorValues,
         tags,
         isLimited,
         inventory,
@@ -410,13 +410,83 @@ export class ProductsService {
       }
 
       // Check if category exists if categoryId is provided
+      let category = null;
       if (categoryId) {
-        const category = await this.prisma.category.findUnique({
+        category = await this.prisma.category.findUnique({
           where: { id: categoryId },
         });
         if (!category) {
           throw new NotFoundException(`Category with ID ${categoryId} not found`);
         }
+      }
+
+      // Handle sizes - create or find them
+      let sizeConnections = undefined;
+      if (sizeValues && sizeValues.length > 0) {
+        // Get category type from the provided category or existing product's category
+        let categoryType = 'clothing'; // default fallback
+        if (category?.type) {
+          categoryType = category.type;
+        } else if (existingProduct.categoryId) {
+          const existingCategory = await this.prisma.category.findUnique({
+            where: { id: existingProduct.categoryId }
+          });
+          categoryType = existingCategory?.type || 'clothing';
+        }
+
+        const sizes = await Promise.all(
+          sizeValues.map(async (sizeValue: string) => {
+            const existingSize = await this.prisma.size.findFirst({
+              where: {
+                value: sizeValue,
+                category: categoryType
+              }
+            });
+            if (existingSize) return existingSize;
+            return this.prisma.size.create({
+              data: {
+                name: sizeValue,
+                value: sizeValue,
+                category: categoryType
+              }
+            });
+          })
+        );
+        sizeConnections = { set: sizes.map(size => ({ id: size.id })) };
+      } else {
+        sizeConnections = { set: [] };
+      }
+
+      // Handle colors - create or find them
+      let colorConnections = undefined;
+      if (colorValues && colorValues.length > 0) {
+        const colors = await Promise.all(
+          colorValues.map(async (colorValue: string) => {
+            const existingColor = await this.prisma.color.findUnique({
+              where: { value: colorValue }
+            });
+            if (existingColor) return existingColor;
+            return this.prisma.color.create({
+              data: {
+                name: colorValue,
+                value: colorValue,
+                class: `bg-[${colorValue}]`
+              }
+            });
+          })
+        );
+        colorConnections = { set: colors.map(color => ({ id: color.id })) };
+      } else {
+        colorConnections = { set: [] };
+      }
+
+      // Handle images - clear existing and create new ones
+      let imageData = undefined;
+      if (images && images.length > 0) {
+        imageData = {
+          deleteMany: {},
+          create: images.map(url => ({ url }))
+        };
       }
 
       // Update product with inventory
@@ -433,15 +503,9 @@ export class ProductsService {
             connect: { id: categoryId }
           } : undefined,
           image,
-          images: images ? {
-            create: images.map(url => ({ url }))
-          } : undefined,
-          sizes: sizes ? {
-            set: sizes.map(id => ({ id }))
-          } : undefined,
-          colors: colors ? {
-            set: colors.map(color => ({ value: color }))
-          } : undefined,
+          images: imageData,
+          sizes: sizeConnections,
+          colors: colorConnections,
           tags,
           isLimited,
           inventory: inventory ? {
@@ -452,7 +516,7 @@ export class ProductsService {
               quantity: item.quantity
             }))
           } : undefined,
-          displaySection: DisplaySection[displaySection],
+          displaySection: displaySection ? DisplaySection[displaySection] : undefined,
         },
         include: {
           category: true,
@@ -473,6 +537,7 @@ export class ProductsService {
 
       return product;
     } catch (error) {
+      this.logger.error('Error updating product:', error);
       throw error;
     }
   }

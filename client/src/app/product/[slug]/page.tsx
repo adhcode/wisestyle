@@ -10,6 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 import { ProductService } from '@/services/product.service';
 import { RateLimitError, NotFoundError } from '@/utils/api-client';
 import { Product, Size, Color } from '@/types/product';
+import { getProductImageUrl, getProductImages } from '@/utils/image';
 import CartButton from '@/app/components/CartButton';
 
 interface ProductPageProps {
@@ -53,11 +54,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                 const productData = await ProductService.getProductBySlug(params.slug);
                 setProduct(productData as Product);
 
-                if (productData?.images?.length > 0) {
-                    setSelectedImage(productData.images[0]);
-                } else if (productData?.image) {
-                    setSelectedImage(productData.image);
-                }
+                // Handle image selection properly
+                const productImages = getProductImages(productData);
+                setSelectedImage(productImages[0]);
 
                 if (productData?.sizes?.length > 0) {
                     setSelectedSize(productData.sizes[0].value);
@@ -98,13 +97,8 @@ export default function ProductPage({ params }: ProductPageProps) {
         if (!product) return;
 
         try {
-            setRateLimitError(null);
-            await toggleLike(Number(product.id));
+            await toggleLike(product.id);
         } catch (error) {
-            if (error instanceof RateLimitError) {
-                setRateLimitError(`${error.message}. Please try again in ${Math.ceil(error.retryAfter)} seconds.`);
-                setTimeout(() => setRateLimitError(null), error.retryAfter * 1000);
-            }
             console.error('Error toggling like:', error);
         }
     };
@@ -112,17 +106,30 @@ export default function ProductPage({ params }: ProductPageProps) {
     const handleAddToCart = () => {
         if (!product) return;
 
-        const item: CustomCartItem = {
+        // Create proper cart item structure matching CartItem interface
+        const cartItem = {
             id: product.id,
             name: product.name,
+            slug: product.slug,
             price: product.salePrice || product.price,
+            description: product.description || '',
+            categoryId: product.categoryId,
             image: selectedImage || product.image || placeholderImage,
+            images: productImages,
+            isLimited: product.isLimited || false,
+            sizes: product.sizes || [],
+            colors: product.colors || [],
+            tags: product.tags || [],
+            inventory: product.inventory || [],
+            displaySection: product.displaySection || 'NONE',
+            createdAt: product.createdAt || new Date(),
+            updatedAt: product.updatedAt || new Date(),
             quantity: quantity,
-            size: selectedSize,
-            color: selectedColor
+            selectedSize: selectedSize || 'Default',
+            selectedColor: selectedColor || 'Default',
         };
 
-        addItem(item as any);
+        addItem(cartItem);
     };
 
     const decrementQuantity = () => {
@@ -134,6 +141,9 @@ export default function ProductPage({ params }: ProductPageProps) {
     const incrementQuantity = () => {
         setQuantity(quantity + 1);
     };
+
+    // Get proper image array for display using utility function
+    const productImages = product ? getProductImages(product) : [placeholderImage];
 
     if (loading) {
         return (
@@ -161,8 +171,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         return notFound();
     }
 
-    const productImages = product.images?.length ? product.images : [product.image || placeholderImage];
-
     return (
         <div className="min-h-screen bg-white font-outfit">
             {/* Breadcrumb */}
@@ -184,26 +192,33 @@ export default function ProductPage({ params }: ProductPageProps) {
             <div className="max-w-[1200px] mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-[80px_1fr_400px] gap-8 items-start">
                 {/* Thumbnails (desktop) */}
                 <div className="hidden md:flex flex-col gap-3 items-center sticky top-24">
-                    {product.images && product.images.length > 0 && product.images.map((img, idx) => (
+                    {productImages.length > 1 && productImages.map((img, idx) => (
                         <button
                             key={idx}
                             onClick={() => setSelectedImage(img)}
-                            className={`w-16 h-20 rounded border ${selectedImage === img ? 'border-[#C97203]' : 'border-transparent'} overflow-hidden`}
+                            className={`w-16 h-20 rounded border-2 ${selectedImage === img ? 'border-[#C97203]' : 'border-gray-200'} overflow-hidden hover:border-[#C97203] transition-colors`}
                         >
-                            <Image src={img} alt={product.name} width={64} height={80} className="object-cover object-center w-full h-full" />
+                            <Image
+                                src={img}
+                                alt={`${product.name} view ${idx + 1}`}
+                                width={64}
+                                height={80}
+                                className="object-cover object-center w-full h-full"
+                            />
                         </button>
                     ))}
                 </div>
 
                 {/* Main Image */}
                 <div className="flex flex-col items-center">
-                    <div className="relative w-full max-w-[420px] aspect-[4/5] bg-[#F9F5F0] rounded overflow-hidden">
+                    <div className="relative w-full max-w-[420px] aspect-[4/5] bg-[#F9F5F0] rounded-lg overflow-hidden">
                         <Image
-                            src={selectedImage || product.image || '/images/placeholder-product.png'}
+                            src={selectedImage || productImages[0] || placeholderImage}
                             alt={product.name}
                             fill
-                            className="object-cover object-center"
+                            className="object-contain object-center"
                             sizes="(max-width: 768px) 100vw, 420px"
+                            priority
                         />
                         {product.salePrice && (
                             <div className="absolute top-4 left-4 bg-[#C97203] text-white text-xs px-2 py-1 rounded">
@@ -212,17 +227,25 @@ export default function ProductPage({ params }: ProductPageProps) {
                         )}
                     </div>
                     {/* Thumbnails (mobile) */}
-                    <div className="flex md:hidden gap-2 mt-4">
-                        {product.images && product.images.length > 0 && product.images.map((img, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setSelectedImage(img)}
-                                className={`w-14 h-16 rounded border ${selectedImage === img ? 'border-[#C97203]' : 'border-transparent'} overflow-hidden`}
-                            >
-                                <Image src={img} alt={product.name} width={56} height={64} className="object-cover object-center w-full h-full" />
-                            </button>
-                        ))}
-                    </div>
+                    {productImages.length > 1 && (
+                        <div className="flex md:hidden gap-2 mt-4 overflow-x-auto pb-2">
+                            {productImages.map((img, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setSelectedImage(img)}
+                                    className={`w-14 h-16 rounded border-2 ${selectedImage === img ? 'border-[#C97203]' : 'border-gray-200'} overflow-hidden flex-shrink-0 hover:border-[#C97203] transition-colors`}
+                                >
+                                    <Image
+                                        src={img}
+                                        alt={`${product.name} view ${idx + 1}`}
+                                        width={56}
+                                        height={64}
+                                        className="object-cover object-center w-full h-full"
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Product Info */}
@@ -255,17 +278,24 @@ export default function ProductPage({ params }: ProductPageProps) {
                     {/* Size Selector */}
                     {product.sizes && product.sizes.length > 0 && (
                         <div>
-                            <label className="block text-xs font-medium text-[#3B2305] mb-1">SIZE:</label>
-                            <select
-                                value={selectedSize}
-                                onChange={e => setSelectedSize(e.target.value)}
-                                className="w-full border border-[#D1B99B] rounded px-3 py-2 text-sm focus:outline-none"
-                            >
-                                <option value="">Please select</option>
+                            <label className="block text-xs font-medium text-[#3B2305] mb-2">SIZE:</label>
+                            <div className="flex flex-wrap gap-2">
                                 {product.sizes.map(size => (
-                                    <option key={size.id} value={size.value}>{size.value}</option>
+                                    <button
+                                        key={size.id}
+                                        onClick={() => setSelectedSize(size.value)}
+                                        className={`px-4 py-2 border text-sm font-medium rounded-md transition-all ${selectedSize === size.value
+                                            ? 'border-[#C97203] bg-[#C97203] text-white'
+                                            : 'border-gray-300 bg-white text-[#3B2305] hover:border-[#C97203] hover:bg-[#FFF7F0]'
+                                            }`}
+                                    >
+                                        {size.value}
+                                    </button>
                                 ))}
-                            </select>
+                            </div>
+                            {selectedSize && (
+                                <p className="mt-1 text-xs text-gray-500">Selected: {selectedSize}</p>
+                            )}
                         </div>
                     )}
                     {/* Add to Cart and Wishlist */}
@@ -277,11 +307,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                             ADD TO BAG
                         </button>
                         <button
-                            onClick={() => toggleLike(Number(product.id))}
-                            className={`w-12 h-12 flex items-center justify-center border rounded ${likedProducts.includes(Number(product.id)) ? 'border-[#C97203] bg-[#FFF7F0]' : 'border-[#D1B99B] bg-white'} transition-all`}
+                            onClick={() => toggleLike(product.id)}
+                            className={`w-12 h-12 flex items-center justify-center border rounded ${likedProducts.includes(product.id) ? 'border-[#C97203] bg-[#FFF7F0]' : 'border-[#D1B99B] bg-white'} transition-all`}
                             aria-label="Add to wishlist"
                         >
-                            <Heart className={`w-6 h-6 ${likedProducts.includes(Number(product.id)) ? 'fill-[#C97203] stroke-[#C97203]' : 'stroke-[#3B2305]'}`} />
+                            <Heart
+                                className={`w-5 h-5 ${likedProducts.includes(product.id) ? 'fill-[#C97203] stroke-[#C97203]' : 'stroke-[#D1B99B]'}`}
+                            />
                         </button>
                     </div>
                     {/* Delivery Info */}

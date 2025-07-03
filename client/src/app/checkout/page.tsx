@@ -14,6 +14,10 @@ import { TruckIcon, CreditCardIcon, CheckCircleIcon } from '@heroicons/react/24/
 import AddressForm from '@/components/AddressForm';
 import { Input } from '@/components/ui/input';
 
+// Force dynamic rendering for this page
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
 // Add validation patterns
 const validationPatterns = {
     name: /^[a-zA-Z\s]{2,50}$/,
@@ -26,6 +30,7 @@ export default function CheckoutPage() {
     const router = useRouter();
     const { items, totalPrice, clearCart } = useCart();
     const { user } = useAuth();
+    const [mounted, setMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'flutterwave' | 'paystack'>('flutterwave');
     const [flutterwavePaymentType, setFlutterwavePaymentType] = useState<'card' | 'bank_transfer' | 'ng'>('card');
@@ -52,10 +57,19 @@ export default function CheckoutPage() {
 
     // Redirect if cart is empty
     useEffect(() => {
-        if (items.length === 0) {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted && items.length === 0) {
             router.push('/');
         }
-    }, [items.length, router]);
+    }, [items.length, router, mounted]);
+
+    // Don't render during SSG
+    if (!mounted) {
+        return <div className="min-h-screen bg-white" />;
+    }
 
     // Load Flutterwave script
     useEffect(() => {
@@ -192,7 +206,7 @@ export default function CheckoutPage() {
 
             if (paymentMethod === 'flutterwave') {
                 // Create order first
-                const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+                const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/orders`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -226,7 +240,7 @@ export default function CheckoutPage() {
                 const order = await orderResponse.json();
 
                 // Initialize Flutterwave payment
-                const fullUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/payments/initialize/flutterwave`;
+                const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/initialize/flutterwave`;
                 console.log('Making payment request to:', fullUrl);
                 console.log('Request payload:', {
                     orderId: order.id,
@@ -283,7 +297,7 @@ export default function CheckoutPage() {
                 }
 
                 // If no special handling needed, proceed with verification
-                const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify/flutterwave/${paymentData.data.flw_ref}`);
+                const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentData.data.flw_ref}`);
                 if (!verifyResponse.ok) {
                     throw new Error('Payment verification failed');
                 }
@@ -316,7 +330,7 @@ export default function CheckoutPage() {
     const handlePinSubmit = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -354,7 +368,7 @@ export default function CheckoutPage() {
     const handleOtpSubmit = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -959,14 +973,13 @@ export default function CheckoutPage() {
                                 {items.map(item => (
                                     <div key={item.id} className="flex items-start space-x-4">
                                         <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                                            {item.image && (
-                                                <Image
-                                                    src={item.image}
-                                                    alt={item.name}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                            )}
+                                            <Image
+                                                src={item.image || '/images/placeholder.png'}
+                                                alt={item.name}
+                                                fill
+                                                className="object-cover object-center"
+                                                sizes="64px"
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>

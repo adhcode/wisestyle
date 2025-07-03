@@ -119,12 +119,12 @@ export default function NewArrivalsPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    toggleLike(Number(product.id));
+                                                    toggleLike(product.id);
                                                 }}
                                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
                                             >
                                                 <Heart
-                                                    className={`w-4 h-4 ${likedProducts.includes(Number(product.id))
+                                                    className={`w-4 h-4 ${likedProducts.includes(product.id)
                                                         ? 'fill-red-500 stroke-red-500'
                                                         : 'stroke-gray-600'
                                                         }`}
@@ -133,7 +133,7 @@ export default function NewArrivalsPage() {
                                         </div>
 
                                         {/* Desktop View */}
-                                        <div className="hidden md:block relative w-full aspect-[1/1] bg-[#F9F5F0]">
+                                        <div className="hidden md:block relative w-full aspect-[1/1] bg-[#F9F5F0] rounded-lg overflow-hidden">
                                             <Image
                                                 src={product.image || '/images/placeholder-product.png'}
                                                 alt={product.name}
@@ -144,12 +144,12 @@ export default function NewArrivalsPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    toggleLike(Number(product.id));
+                                                    toggleLike(product.id);
                                                 }}
                                                 className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10 hover:scale-110 transition-transform"
                                             >
                                                 <Heart
-                                                    className={`w-5 h-5 ${likedProducts.includes(Number(product.id))
+                                                    className={`w-5 h-5 ${likedProducts.includes(product.id)
                                                         ? 'fill-red-500 stroke-red-500'
                                                         : 'stroke-gray-600'
                                                         }`}

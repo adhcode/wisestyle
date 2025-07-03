@@ -22,4 +22,60 @@ export const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, E
     const img = event.currentTarget;
     img.src = getFallbackImage(category || 'default');
     img.onerror = null; // Prevent infinite loop if fallback also fails
-}; 
+};
+
+/**
+ * Utility functions for handling product images
+ */
+
+export function getProductImageUrl(product: any): string {
+    // First try the main image field
+    if (product.image && typeof product.image === 'string') {
+        return product.image;
+    }
+
+    // Then try the images array
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        const firstImage = product.images[0];
+        
+        // Handle string array
+        if (typeof firstImage === 'string') {
+            return firstImage;
+        }
+        
+        // Handle object array with url property
+        if (typeof firstImage === 'object' && firstImage?.url) {
+            return firstImage.url;
+        }
+    }
+
+    // Fallback to placeholder
+    return '/images/placeholder.png';
+}
+
+export function getProductImages(product: any): string[] {
+    const images: string[] = [];
+
+    // Add main image if it exists
+    if (product.image && typeof product.image === 'string') {
+        images.push(product.image);
+    }
+
+    // Add images from array
+    if (product.images && Array.isArray(product.images)) {
+        for (const img of product.images) {
+            if (typeof img === 'string') {
+                if (!images.includes(img)) {
+                    images.push(img);
+                }
+            } else if (typeof img === 'object' && img?.url) {
+                if (!images.includes(img.url)) {
+                    images.push(img.url);
+                }
+            }
+        }
+    }
+
+    // Return array or fallback
+    return images.length > 0 ? images : ['/images/placeholder.png'];
+} 

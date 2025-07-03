@@ -64,7 +64,7 @@ async function bootstrap() {
   });
 
   // CORS configuration
-  const defaultProdOrigin = 'https://wisestyle.vercel.app';
+  const defaultProdOrigin = 'https://www.wisestyleshop.com';
   const envFrontend = process.env.FRONTEND_URL;
   const allowedOrigins = isProduction
     ? [defaultProdOrigin, envFrontend].filter(Boolean)

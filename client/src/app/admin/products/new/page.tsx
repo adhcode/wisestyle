@@ -759,19 +759,30 @@ export default function NewProductPage() {
                                         const inventoryItem = (formData.inventory || []).find(
                                             item => item.sizeId === sizeId && item.colorId === colorId
                                         );
-                                        return (
-                                            <div key={`${sizeId}-${colorId}`} className="flex items-center gap-2">
-                                                <div
-                                                    className="w-6 h-6 rounded-full"
-                                                    style={{ backgroundColor: colorId }}
-                                                />
-                                                <span>{inventoryItem?.quantity || 0} units</span>
-                                            </div>
-                                        );
+                                        const quantity = inventoryItem?.quantity || 0;
+
+                                        // Only show inventory if quantity is greater than 0
+                                        if (quantity > 0) {
+                                            return (
+                                                <div key={`${sizeId}-${colorId}`} className="flex items-center gap-2">
+                                                    <div
+                                                        className="w-6 h-6 rounded-full"
+                                                        style={{ backgroundColor: colorId }}
+                                                    />
+                                                    <span>{quantity} units</span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
                                     })}
                                 </div>
                             ))}
                         </div>
+
+                        {/* Show message if no inventory is set */}
+                        {!(formData.inventory || []).some(item => item.quantity > 0) && (
+                            <p className="text-gray-500 italic">No inventory quantities set</p>
+                        )}
                     </div>
 
                     <div className="flex justify-end gap-4 mt-6">

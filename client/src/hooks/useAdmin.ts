@@ -35,7 +35,7 @@ export interface CreateProductData {
         colorId: string;
         quantity: number;
     }>;
-    displaySection?: 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS' | 'NONE';
+    displaySection?: 'NONE' | 'NEW_ARRIVAL' | 'TRENDING' | 'SALES';
 }
 
 export interface UpdateProductData {

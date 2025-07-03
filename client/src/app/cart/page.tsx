@@ -68,18 +68,18 @@ export default function CartPage() {
             </div>
 
             <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px] pt-6 pb-32 md:pb-8">
-                {/* Reservation Notice */}
-                <div className="flex flex-col items-center justify-center mb-4">
-                    <span className="text-xs sm:text-sm text-gray-700 mb-1 text-center">
-                        Your products will be reserved in the cart for <span className="font-semibold">1 hour</span>. If you don't complete your order, they'll be removed.
-                    </span>
-                </div>
                 {/* Cart Items */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-[16px]">
                     {items.map((item) => (
                         <div key={item.id} className="bg-white rounded-[4px] overflow-hidden flex flex-col w-full shadow hover:shadow-md transition">
                             <div className="relative w-full aspect-[211/300] h-[300px]">
-                                <Image src={item.image || '/images/placeholder.png'} alt={item.name} fill className="object-cover" />
+                                <Image
+                                    src={item.image || '/images/placeholder.png'}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover object-center"
+                                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                />
                             </div>
                             <div className="flex flex-col justify-between p-3 items-start">
                                 <span className="text-[16px] font-[600] text-[#3B2305]">{item.name}</span>

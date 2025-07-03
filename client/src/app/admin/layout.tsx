@@ -10,12 +10,14 @@ import {
     Settings,
     LogOut,
     Menu,
-    X
+    X,
+    Package
 } from 'lucide-react';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Products', href: '/admin/products', icon: ShoppingBag },
+    { name: 'Orders', href: '/admin/orders', icon: Package },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];

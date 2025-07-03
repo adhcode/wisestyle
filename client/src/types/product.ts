@@ -74,7 +74,7 @@ export interface Product {
     colors: Color[];
     tags: string[];
     inventory: InventoryItem[];
-    displaySection: 'NEW_ARRIVALS' | 'WORK_WEEKEND' | 'EFFORTLESS' | 'NONE';
+    displaySection: 'NONE' | 'NEW_ARRIVAL' | 'TRENDING' | 'SALES';
     createdAt: Date;
     updatedAt: Date;
     salePrice?: number;
