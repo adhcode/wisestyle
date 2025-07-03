@@ -15,8 +15,8 @@ import AddressForm from '@/components/AddressForm';
 import { Input } from '@/components/ui/input';
 
 // Force dynamic rendering for this page
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // Add validation patterns
 const validationPatterns = {
@@ -29,8 +29,18 @@ const validationPatterns = {
 export default function CheckoutPage() {
     const router = useRouter();
     const { items, totalPrice, clearCart } = useCart();
-    const { user } = useAuth();
     const [mounted, setMounted] = useState(false);
+
+    // Safely handle auth context
+    let user = null;
+    try {
+        const authContext = useAuth();
+        user = authContext?.user;
+    } catch (error) {
+        // Auth context not available during SSR/SSG
+        console.log('Auth context not available during build');
+    }
+
     const [isLoading, setIsLoading] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'flutterwave' | 'paystack'>('flutterwave');
     const [flutterwavePaymentType, setFlutterwavePaymentType] = useState<'card' | 'bank_transfer' | 'ng'>('card');

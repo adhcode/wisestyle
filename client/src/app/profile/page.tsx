@@ -7,12 +7,13 @@ import Link from 'next/link';
 import { User, ShoppingBag, Heart, Settings, LogOut, Edit, Save, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-// Disable static generation for this page
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export default function ProfilePage() {
-    const { user, logout } = useAuth();
     const router = useRouter();
+    const [mounted, setMounted] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -21,18 +22,46 @@ export default function ProfilePage() {
         email: '',
     });
 
+    // Safely handle auth context
+    let user = null;
+    let logout = null;
+
+    try {
+        const authContext = useAuth();
+        user = authContext?.user;
+        logout = authContext?.logout;
+    } catch (error) {
+        // Auth context not available during SSR/SSG
+        console.log('Auth context not available during build');
+    }
+
     useEffect(() => {
-        if (!user) {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted && !user) {
             router.push('/sign-in');
             return;
         }
 
-        setFormData({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-        });
-    }, [user, router]);
+        if (mounted && user) {
+            setFormData({
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+            });
+        }
+    }, [user, router, mounted]);
+
+    // Don't render until mounted to prevent hydration issues
+    if (!mounted) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3B2305]"></div>
+            </div>
+        );
+    }
 
     const handleSave = async () => {
         setLoading(true);
@@ -55,7 +84,9 @@ export default function ProfilePage() {
 
     const handleLogout = async () => {
         try {
-            await logout();
+            if (logout) {
+                await logout();
+            }
             router.push('/');
             toast.success('Logged out successfully');
         } catch (error) {

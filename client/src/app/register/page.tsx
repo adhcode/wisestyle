@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,12 +10,13 @@ import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-// Disable static generation for this page
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { register } = useAuth();
+    const [mounted, setMounted] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -25,6 +26,29 @@ export default function RegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Safely handle auth context
+    let register = null;
+    try {
+        const authContext = useAuth();
+        register = authContext?.register;
+    } catch (error) {
+        // Auth context not available during SSR/SSG
+        console.log('Auth context not available during build');
+    }
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Don't render until mounted to prevent hydration issues
+    if (!mounted) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#FFFCF8]">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3B2305]"></div>
+            </div>
+        );
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
