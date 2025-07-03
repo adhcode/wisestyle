@@ -32,7 +32,7 @@ export default function CheckoutPage() {
     const [mounted, setMounted] = useState(false);
 
     // Safely handle auth context
-    let user = null;
+    let user: { firstName?: string; lastName?: string; email?: string; id?: string } | null = null;
     try {
         const authContext = useAuth();
         user = authContext?.user;

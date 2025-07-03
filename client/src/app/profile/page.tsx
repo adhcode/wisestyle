@@ -23,8 +23,8 @@ export default function ProfilePage() {
     });
 
     // Safely handle auth context
-    let user = null;
-    let logout = null;
+    let user: { firstName?: string; lastName?: string; email?: string; id?: string } | null = null;
+    let logout: (() => Promise<void>) | null = null;
 
     try {
         const authContext = useAuth();
