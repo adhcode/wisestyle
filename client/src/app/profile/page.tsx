@@ -47,9 +47,9 @@ export default function ProfilePage() {
 
         if (mounted && user) {
             setFormData({
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                email: user.email || '',
+                firstName: user?.firstName || '',
+                lastName: user?.lastName || '',
+                email: user?.email || '',
             });
         }
     }, [user, router, mounted]);
@@ -113,7 +113,7 @@ export default function ProfilePage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-[#3B2305]">My Profile</h1>
-                            <p className="text-[#3B2305] opacity-75">Welcome back, {user.firstName || user.email}</p>
+                            <p className="text-[#3B2305] opacity-75">Welcome back, {user?.firstName || user?.email}</p>
                         </div>
                     </div>
                 </div>
@@ -184,9 +184,9 @@ export default function ProfilePage() {
                                             onClick={() => {
                                                 setIsEditing(false);
                                                 setFormData({
-                                                    firstName: user.firstName || '',
-                                                    lastName: user.lastName || '',
-                                                    email: user.email || '',
+                                                    firstName: user?.firstName || '',
+                                                    lastName: user?.lastName || '',
+                                                    email: user?.email || '',
                                                 });
                                             }}
                                             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
@@ -212,7 +212,7 @@ export default function ProfilePage() {
                                             placeholder="Enter your first name"
                                         />
                                     ) : (
-                                        <p className="text-gray-900 py-3">{user.firstName || 'Not provided'}</p>
+                                        <p className="text-gray-900 py-3">{user?.firstName || 'Not provided'}</p>
                                     )}
                                 </div>
 
@@ -229,7 +229,7 @@ export default function ProfilePage() {
                                             placeholder="Enter your last name"
                                         />
                                     ) : (
-                                        <p className="text-gray-900 py-3">{user.lastName || 'Not provided'}</p>
+                                        <p className="text-gray-900 py-3">{user?.lastName || 'Not provided'}</p>
                                     )}
                                 </div>
 
@@ -246,7 +246,7 @@ export default function ProfilePage() {
                                             placeholder="Enter your email"
                                         />
                                     ) : (
-                                        <p className="text-gray-900 py-3">{user.email}</p>
+                                        <p className="text-gray-900 py-3">{user?.email}</p>
                                     )}
                                 </div>
                             </div>

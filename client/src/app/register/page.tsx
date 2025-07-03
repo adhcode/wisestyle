@@ -28,7 +28,7 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
 
     // Safely handle auth context
-    let register: ((data: any) => Promise<void>) | null = null;
+    let register: ((email: string, password: string, firstName: string, lastName: string) => Promise<void>) | null = null;
     try {
         const authContext = useAuth();
         register = authContext?.register;
