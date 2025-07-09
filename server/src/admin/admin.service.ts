@@ -39,10 +39,12 @@ export class AdminService {
   async getStats() {
     const [
       totalProducts,
+      totalCustomers,
       totalOrders,
       totalRevenue
     ] = await Promise.all([
       this.prisma.product.count(),
+      this.prisma.user.count({ where: { role: 'USER' } }),
       this.prisma.order.count(),
       this.prisma.order.aggregate({
         _sum: {
@@ -53,6 +55,7 @@ export class AdminService {
 
     return {
       totalProducts,
+      totalCustomers,
       totalOrders,
       totalRevenue: totalRevenue._sum.total || 0
     };
@@ -63,6 +66,32 @@ export class AdminService {
       take: 5,
       orderBy: {
         createdAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          }
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                images: {
+                  select: {
+                    url: true
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
   }
@@ -164,6 +193,7 @@ export class AdminService {
         lastName: true,
         role: true,
         createdAt: true,
+        isEmailVerified: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -189,6 +219,12 @@ export class AdminService {
                 id: true,
                 name: true,
                 price: true,
+                image: true,
+                images: {
+                  select: {
+                    url: true
+                  }
+                }
               },
             },
           },

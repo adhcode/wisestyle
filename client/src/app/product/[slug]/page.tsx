@@ -327,21 +327,157 @@ export default function ProductPage({ params }: ProductPageProps) {
                             <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Product Details <span className="ml-2">+</span></summary>
                             <div className="mt-2 text-xs text-[#3B2305]">{product.description}</div>
                         </details>
+
+                        <details className="py-3 group">
+                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Size Guide <span className="ml-2">+</span></summary>
+                            <div className="mt-3 text-xs text-[#3B2305]">
+                                <div className="bg-[#F9F5F0] p-4 rounded-lg">
+                                    <h4 className="font-medium mb-3 text-[#1E1E1E]">Size Chart</h4>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-[#E5E1D8]">
+                                                    <th className="text-left py-2 px-3">Size</th>
+                                                    <th className="text-left py-2 px-3">Chest (inches)</th>
+                                                    <th className="text-left py-2 px-3">Waist (inches)</th>
+                                                    <th className="text-left py-2 px-3">Length (inches)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="border-b border-[#F4EFE8]">
+                                                    <td className="py-2 px-3 font-medium">XS</td>
+                                                    <td className="py-2 px-3">32-34</td>
+                                                    <td className="py-2 px-3">26-28</td>
+                                                    <td className="py-2 px-3">26</td>
+                                                </tr>
+                                                <tr className="border-b border-[#F4EFE8]">
+                                                    <td className="py-2 px-3 font-medium">S</td>
+                                                    <td className="py-2 px-3">34-36</td>
+                                                    <td className="py-2 px-3">28-30</td>
+                                                    <td className="py-2 px-3">27</td>
+                                                </tr>
+                                                <tr className="border-b border-[#F4EFE8]">
+                                                    <td className="py-2 px-3 font-medium">M</td>
+                                                    <td className="py-2 px-3">36-38</td>
+                                                    <td className="py-2 px-3">30-32</td>
+                                                    <td className="py-2 px-3">28</td>
+                                                </tr>
+                                                <tr className="border-b border-[#F4EFE8]">
+                                                    <td className="py-2 px-3 font-medium">L</td>
+                                                    <td className="py-2 px-3">38-40</td>
+                                                    <td className="py-2 px-3">32-34</td>
+                                                    <td className="py-2 px-3">29</td>
+                                                </tr>
+                                                <tr className="border-b border-[#F4EFE8]">
+                                                    <td className="py-2 px-3 font-medium">XL</td>
+                                                    <td className="py-2 px-3">40-42</td>
+                                                    <td className="py-2 px-3">34-36</td>
+                                                    <td className="py-2 px-3">30</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 px-3 font-medium">XXL</td>
+                                                    <td className="py-2 px-3">42-44</td>
+                                                    <td className="py-2 px-3">36-38</td>
+                                                    <td className="py-2 px-3">31</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p className="mt-3 text-xs text-[#3B2305] opacity-80">
+                                        Measurements are approximate. For the best fit, we recommend checking your measurements against our size guide.
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+
+                        <details className="py-3 group">
+                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Shipping & Delivery <span className="ml-2">+</span></summary>
+                            <div className="mt-3 text-xs text-[#3B2305] space-y-4">
+                                <div>
+                                    <h4 className="font-medium mb-2 text-[#1E1E1E]">Delivery Options</h4>
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-[#C97203] font-medium">•</span>
+                                            <div>
+                                                <span className="font-medium">Lagos State Delivery:</span> 24-48 hours after payment processing
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-[#C97203] font-medium">•</span>
+                                            <div>
+                                                <span className="font-medium">Interstate Delivery:</span> 3-5 working days via DHL or GIGL
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-[#C97203] font-medium">•</span>
+                                            <div>
+                                                <span className="font-medium">International Delivery:</span> Coming soon
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-2 text-[#1E1E1E]">Important Notes</h4>
+                                    <ul className="space-y-1 text-xs">
+                                        <li>• Orders placed on weekends or public holidays will be processed on the next business day</li>
+                                        <li>• Delivery addresses cannot be modified once your order is placed</li>
+                                        <li>• We do not deliver to P.O. boxes</li>
+                                        <li>• Express delivery available - contact us for pricing and availability</li>
+                                        <li>• International orders may be subject to import duties and taxes (customer responsibility)</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-2 text-[#1E1E1E]">Order Tracking</h4>
+                                    <p className="text-xs">You'll receive a confirmation email with tracking information once your order is dispatched. Track your package directly on the carrier's website.</p>
+                                </div>
+
+                                <div className="pt-2 border-t border-[#F4EFE8]">
+                                    <p className="text-xs">
+                                        Questions about shipping? Contact us at{' '}
+                                        <a href="tel:+2348148331000" className="text-[#C97203] hover:underline">+234 814 833 1000</a>
+                                        {' '}or{' '}
+                                        <a href="mailto:info@wisestyle.com" className="text-[#C97203] hover:underline">info@wisestyle.com</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+
                         <details className="py-3 group">
                             <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Brand <span className="ml-2">+</span></summary>
-                            <div className="mt-2 text-xs text-[#3B2305]">wisestyle</div>
+                            <div className="mt-2 text-xs text-[#3B2305]">WiseStyle - Premium Nigerian fashion brand committed to quality, style, and exceptional customer service.</div>
                         </details>
+
                         <details className="py-3 group">
-                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Size & Fit <span className="ml-2">+</span></summary>
-                            <div className="mt-2 text-xs text-[#3B2305]">See size guide for more info.</div>
+                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Care Instructions <span className="ml-2">+</span></summary>
+                            <div className="mt-2 text-xs text-[#3B2305]">
+                                <ul className="space-y-1">
+                                    <li>• Machine wash cold with similar colors</li>
+                                    <li>• Use gentle cycle and mild detergent</li>
+                                    <li>• Do not bleach or use fabric softener</li>
+                                    <li>• Hang dry or tumble dry on low heat</li>
+                                    <li>• Iron on low temperature if needed</li>
+                                </ul>
+                            </div>
                         </details>
+
                         <details className="py-3 group">
-                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Look After Me <span className="ml-2">+</span></summary>
-                            <div className="mt-2 text-xs text-[#3B2305]">Machine wash according to instructions on care label.</div>
-                        </details>
-                        <details className="py-3 group">
-                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">About Me <span className="ml-2">+</span></summary>
-                            <div className="mt-2 text-xs text-[#3B2305]">Premium quality product designed for style and comfort.</div>
+                            <summary className="flex justify-between items-center cursor-pointer text-sm font-medium text-[#1E1E1E] group-open:text-[#C97203]">Returns & Exchanges <span className="ml-2">+</span></summary>
+                            <div className="mt-2 text-xs text-[#3B2305]">
+                                <p className="mb-2">We want you to be completely satisfied with your purchase.</p>
+                                <ul className="space-y-1">
+                                    <li>• 30-day return policy from delivery date</li>
+                                    <li>• Items must be unworn with original tags</li>
+                                    <li>• Free returns for defective items</li>
+                                    <li>• Contact customer service to initiate returns</li>
+                                </ul>
+                                <p className="mt-2">
+                                    Read our full{' '}
+                                    <Link href="/returns-policy" className="text-[#C97203] hover:underline">Returns & Refunds Policy</Link>
+                                    {' '}for detailed information.
+                                </p>
+                            </div>
                         </details>
                     </div>
                 </div>

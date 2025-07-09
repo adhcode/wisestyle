@@ -52,6 +52,12 @@ import { join } from 'path';
                 JWT_SECRET: Joi.string().required(),
                 JWT_EXPIRATION: Joi.string().default('24h'),
                 FRONTEND_URL: Joi.string().default('https://wisestyle.vercel.app'),
+                SENDGRID_API_KEY: Joi.string().optional(),
+                SENDGRID_FROM_EMAIL: Joi.string().optional(),
+                MAIL_HOST: Joi.string().optional(),
+                MAIL_PORT: Joi.string().optional(),
+                MAIL_USER: Joi.string().optional(),
+                MAIL_PASS: Joi.string().optional(),
             }),
             validationOptions: {
                 allowUnknown: true,

@@ -34,19 +34,21 @@ export const orderConfirmationTemplate = (order: any) => `
 
       <h3>Order Items:</h3>
       ${order.items.map(item => `
-        <div class="item">
-          <p><strong>${item.product.name}</strong></p>
-          <p>Quantity: ${item.quantity}</p>
-          <p>Price: $${item.price}</p>
-          ${item.color ? `<p>Color: ${item.color}</p>` : ''}
-          ${item.size ? `<p>Size: ${item.size}</p>` : ''}
+        <div class="item" style="display:flex; align-items:center;">
+          <img src="${item.product.image || item.product.images?.[0]?.url || ''}" alt="${item.product.name}" width="60" style="margin-right:12px; border-radius:4px; object-fit:cover;" />
+          <div>
+            <p style="margin:0 0 4px 0;"><strong>${item.product.name}</strong></p>
+            <p style="margin:0;">Qty: ${item.quantity} &nbsp;|&nbsp; Price: ₦${Number(item.price).toLocaleString('en-NG')}</p>
+            ${item.color ? `<p style="margin:0;">Color: ${item.color}</p>` : ''}
+            ${item.size ? `<p style="margin:0;">Size: ${item.size}</p>` : ''}
+          </div>
         </div>
       `).join('')}
 
       <div class="total">
-        <p>Subtotal: $${order.total}</p>
-        <p>Shipping: $${order.shippingCost}</p>
-        <p>Total: $${order.total + order.shippingCost}</p>
+        <p>Subtotal: ₦${Number(order.total).toLocaleString('en-NG')}</p>
+        <p>Shipping: ₦${Number(order.shippingCost).toLocaleString('en-NG')}</p>
+        <p>Total: ₦${Number(order.total + order.shippingCost).toLocaleString('en-NG')}</p>
       </div>
     </div>
 

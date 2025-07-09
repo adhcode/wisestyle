@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { TruckIcon, CreditCardIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import AddressForm from '@/components/AddressForm';
 import { Input } from '@/components/ui/input';
+import Script from 'next/script';
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,7 @@ export default function CheckoutPage() {
     const [pin, setPin] = useState('');
     const [otp, setOtp] = useState('');
     const [paymentResponse, setPaymentResponse] = useState<any>(null);
+    const [flwReady, setFlwReady] = useState(false);
 
     // Redirect if cart is empty
     useEffect(() => {
@@ -80,21 +82,6 @@ export default function CheckoutPage() {
     if (!mounted) {
         return <div className="min-h-screen bg-white" />;
     }
-
-    // Load Flutterwave script
-    useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.flutterwave.com/v3.js';
-        script.async = true;
-        document.body.appendChild(script);
-
-        return () => {
-            // Cleanup
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
-            }
-        };
-    }, []);
 
     const shippingCost = selectedShipping?.price || 0;
     const grandTotal = totalPrice + shippingCost;
@@ -291,6 +278,13 @@ export default function CheckoutPage() {
                 const paymentData = await paymentResponse.json();
                 console.log('Payment initialized successfully:', paymentData);
 
+                // New standard checkout flow returns a hosted payment link
+                if (paymentData.link) {
+                    // Redirect the user to Flutterwave hosted payment page
+                    window.location.href = paymentData.link as string;
+                    return;
+                }
+
                 // Handle different payment scenarios
                 if (paymentData.data?.authorization?.mode === 'pin') {
                     setPaymentState('pin');
@@ -322,7 +316,66 @@ export default function CheckoutPage() {
                 }
             } else {
                 // Handle Paystack payment
-                toast.error('Paystack payment not implemented yet');
+                // 1. Create the order first (same flow as Flutterwave)
+                const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        items: items.map(item => ({
+                            productId: item.id,
+                            quantity: item.quantity,
+                            price: item.price,
+                            color: item.selectedColor,
+                            size: item.selectedSize
+                        })),
+                        total: totalPrice,
+                        shippingAddress: {
+                            ...shippingAddress,
+                            phone: contact.phone
+                        },
+                        billingAddress: billingSame ? shippingAddress : billingAddress,
+                        shippingMethod: selectedShipping?.name,
+                        shippingCost: selectedShipping?.price || 0,
+                        email: contact.email || user?.email,
+                        phone: contact.phone
+                    }),
+                });
+
+                if (!orderRes.ok) {
+                    const errData = await orderRes.json();
+                    throw new Error(errData.message || 'Failed to create order');
+                }
+
+                const order = await orderRes.json();
+
+                // 2. Initialize Paystack payment via backend
+                const initRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/initialize/paystack`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        orderId: order.id,
+                        amount: totalPrice + (selectedShipping?.price || 0),
+                        email: contact.email || user?.email || '',
+                    }),
+                });
+
+                if (!initRes.ok) {
+                    const errData = await initRes.json();
+                    throw new Error(errData.message || 'Failed to initialize Paystack payment');
+                }
+
+                const initData = await initRes.json();
+
+                if (initData.status && initData.data?.authorization_url) {
+                    window.location.href = initData.data.authorization_url as string;
+                    return;
+                }
+
+                throw new Error('Unable to initiate Paystack payment');
             }
         } catch (error: unknown) {
             console.error('Payment error:', error);
@@ -730,12 +783,7 @@ export default function CheckoutPage() {
                             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-medium">Payment Method</h2>
-                                    <div className="flex items-center space-x-3">
-                                        <img src="/images/ssl-badge.png" alt="SSL Secure" className="h-8" />
-                                        <img src="/images/pci-badge.png" alt="PCI Compliant" className="h-8" />
-                                        <img src="/images/visa-badge.png" alt="Visa" className="h-8" />
-                                        <img src="/images/mastercard-badge.png" alt="Mastercard" className="h-8" />
-                                    </div>
+
                                 </div>
 
                                 <div className="space-y-6">
@@ -757,7 +805,7 @@ export default function CheckoutPage() {
                                             <div className="flex items-center space-x-4">
                                                 <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg border border-gray-100">
                                                     <img
-                                                        src="/images/flutterwave-logo.png"
+                                                        src="/images/payment/flutterwave.svg"
                                                         alt="Flutterwave"
                                                         className="h-8 w-auto"
                                                     />
@@ -793,7 +841,7 @@ export default function CheckoutPage() {
                                             <div className="flex items-center space-x-4">
                                                 <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg border border-gray-100">
                                                     <img
-                                                        src="/images/paystack-logo.png"
+                                                        src="/images/payment/paystack.svg"
                                                         alt="Paystack"
                                                         className="h-8 w-auto"
                                                     />
@@ -859,7 +907,7 @@ export default function CheckoutPage() {
                                                             onChange={() => setFlutterwavePaymentType('card')}
                                                             className="sr-only"
                                                         />
-                                                        <div className="flex items-center space-x-3">
+                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
                                                             <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
                                                                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -878,7 +926,7 @@ export default function CheckoutPage() {
                                                             onChange={() => setFlutterwavePaymentType('bank_transfer')}
                                                             className="sr-only"
                                                         />
-                                                        <div className="flex items-center space-x-3">
+                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
                                                             <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
                                                                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -897,7 +945,7 @@ export default function CheckoutPage() {
                                                             onChange={() => setFlutterwavePaymentType('ng')}
                                                             className="sr-only"
                                                         />
-                                                        <div className="flex items-center space-x-3">
+                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
                                                             <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
                                                                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -954,7 +1002,7 @@ export default function CheckoutPage() {
                                     )}
 
                                     <button
-                                        className="w-full bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm"
+                                        className="w-full bg-[#C97203] text-white py-4 px-6 rounded-lg hover:bg-[#C97203]/90 transition-colors font-medium text-sm"
                                         disabled={isLoading}
                                         onClick={handlePayment}
                                     >
@@ -1022,6 +1070,11 @@ export default function CheckoutPage() {
                     </div>
                 </div>
             </div>
+            <Script
+                src="https://checkout.flutterwave.com/v3.js"
+                strategy="afterInteractive"
+                onLoad={() => setFlwReady(true)}
+            />
         </div>
     );
 } 

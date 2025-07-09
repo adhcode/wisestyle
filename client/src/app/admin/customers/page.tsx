@@ -13,7 +13,10 @@ import {
     Edit,
     Trash2,
     UserPlus,
-    Filter
+    Filter,
+    Users,
+    CheckCircle,
+    XCircle
 } from "lucide-react";
 import { formatDistanceToNow, format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -37,6 +40,7 @@ export default function CustomersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<'ALL' | 'USER' | 'ADMIN'>('ALL');
     const [sortBy, setSortBy] = useState<'name' | 'email' | 'date'>('date');
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         fetchCustomers();
@@ -119,12 +123,31 @@ export default function CustomersPage() {
     if (loading) {
         return (
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#3B2305]">Customers</h1>
-                    <p className="mt-1 text-sm text-gray-500">Manage customer accounts and information</p>
+                {/* Header skeleton */}
+                <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-32 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-64"></div>
                 </div>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3B2305]" />
+
+                {/* Search skeleton */}
+                <div className="bg-white rounded-xl shadow-sm border p-4">
+                    <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+
+                {/* Cards skeleton */}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-white p-6 rounded-xl shadow-sm border animate-pulse">
+                            <div className="flex items-center space-x-4">
+                                <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -134,16 +157,17 @@ export default function CustomersPage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#3B2305]">Customers</h1>
-                    <p className="mt-1 text-sm text-gray-500">Manage customer accounts and information</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Customers</h1>
+                    <p className="mt-1 text-sm text-gray-600">Manage customer accounts and information</p>
                 </div>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <div className="text-red-600 text-center">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                    <div className="text-red-600">
+                        <XCircle className="w-12 h-12 mx-auto mb-4" />
                         <p className="text-lg font-medium">Error loading customers</p>
-                        <p className="text-sm mt-1">{error}</p>
+                        <p className="text-sm mt-1 text-gray-500">{error}</p>
                         <Button
                             onClick={fetchCustomers}
-                            className="mt-4 bg-[#3B2305] hover:bg-[#2A1804]"
+                            className="mt-4 bg-blue-600 hover:bg-blue-700"
                         >
                             Try Again
                         </Button>
@@ -156,69 +180,102 @@ export default function CustomersPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#3B2305]">Customers</h1>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Customers</h1>
+                    <p className="mt-1 text-sm text-gray-600">
                         Manage customer accounts and information ({filteredAndSortedCustomers.length} customers)
                     </p>
                 </div>
-                <Button className="bg-[#3B2305] hover:bg-[#2A1804]">
+                <Button className="bg-blue-600 hover:bg-blue-700 inline-flex items-center justify-center">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add Customer
                 </Button>
             </div>
 
-            {/* Filters and Search */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                        type="text"
-                        placeholder="Search customers by name or email..."
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+            {/* Search and Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <div className="space-y-4">
+                    {/* Search */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search customers by name or email..."
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Mobile filter toggle */}
+                    <div className="sm:hidden">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="inline-flex items-center px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            <Filter className="w-4 h-4 mr-2" />
+                            Filters {showFilters ? '▲' : '▼'}
+                        </button>
+                    </div>
+
+                    {/* Filters */}
+                    <div className={`flex flex-col sm:flex-row gap-4 ${showFilters ? 'block' : 'hidden sm:flex'}`}>
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value as 'ALL' | 'USER' | 'ADMIN')}
+                            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="ALL">All Roles</option>
+                            <option value="USER">Users</option>
+                            <option value="ADMIN">Admins</option>
+                        </select>
+
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'name' | 'email' | 'date')}
+                            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="date">Sort by Date</option>
+                            <option value="name">Sort by Name</option>
+                            <option value="email">Sort by Email</option>
+                        </select>
+                    </div>
                 </div>
-
-                <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as 'ALL' | 'USER' | 'ADMIN')}
-                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B2305]"
-                >
-                    <option value="ALL">All Roles</option>
-                    <option value="USER">Users</option>
-                    <option value="ADMIN">Admins</option>
-                </select>
-
-                <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'name' | 'email' | 'date')}
-                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3B2305]"
-                >
-                    <option value="date">Sort by Date</option>
-                    <option value="name">Sort by Name</option>
-                    <option value="email">Sort by Email</option>
-                </select>
             </div>
 
+            {/* Empty state */}
+            {filteredAndSortedCustomers.length === 0 && !loading && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900">
+                        {searchQuery || roleFilter !== 'ALL' ? 'No customers found' : 'No customers yet'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {searchQuery || roleFilter !== 'ALL'
+                            ? 'Try adjusting your search terms or filters.'
+                            : 'Customer accounts will appear here once users register.'
+                        }
+                    </p>
+                </div>
+            )}
+
             {/* Customers Grid */}
-            {filteredAndSortedCustomers.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {filteredAndSortedCustomers.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {filteredAndSortedCustomers.map((customer) => (
-                        <Card key={customer.id} className="p-6 hover:shadow-md transition-shadow">
+                        <Card key={customer.id} className="p-6 hover:shadow-md transition-shadow border border-gray-100">
                             <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-4 flex-1">
-                                    <div className="p-3 bg-[#F9F5F0] rounded-full">
-                                        <User className="w-6 h-6 text-[#3B2305]" />
+                                <div className="flex items-start space-x-4 flex-1 min-w-0">
+                                    <div className="flex-shrink-0 p-3 bg-blue-50 rounded-full">
+                                        <User className="w-6 h-6 text-blue-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <h3 className="text-lg font-medium text-[#3B2305] truncate">
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                            <h3 className="text-base font-medium text-gray-900 truncate">
                                                 {customer.firstName || 'No name'} {customer.lastName || ''}
                                             </h3>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${customer.role === 'ADMIN'
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${customer.role === 'ADMIN'
                                                     ? 'bg-purple-100 text-purple-800'
                                                     : 'bg-gray-100 text-gray-800'
                                                 }`}>
@@ -227,31 +284,33 @@ export default function CustomersPage() {
                                         </div>
 
                                         <div className="space-y-2 text-sm text-gray-600">
-                                            <p className="flex items-center">
-                                                <Mail className="w-4 h-4 mr-2" />
+                                            <div className="flex items-center">
+                                                <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
                                                 <span className="truncate">{customer.email}</span>
                                                 {customer.isEmailVerified && (
-                                                    <span className="ml-2 text-green-600">✓</span>
+                                                    <CheckCircle className="w-4 h-4 ml-2 text-green-600 flex-shrink-0" />
                                                 )}
-                                            </p>
-                                            <p className="flex items-center">
-                                                <Calendar className="w-4 h-4 mr-2" />
-                                                Joined {formatDistanceToNow(new Date(customer.createdAt), { addSuffix: true })}
-                                            </p>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                                                <span className="text-xs">
+                                                    Joined {formatDistanceToNow(new Date(customer.createdAt), { addSuffix: true })}
+                                                </span>
+                                            </div>
                                             {customer.totalOrders !== undefined && (
-                                                <p className="text-[#3B2305] font-medium">
-                                                    {customer.totalOrders} orders • ${customer.totalSpent || 0} spent
-                                                </p>
+                                                <div className="text-blue-600 font-medium text-xs">
+                                                    {customer.totalOrders} orders • ₦{customer.totalSpent || 0} spent
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center space-x-2">
+                                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 ml-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="border-[#3B2305] text-[#3B2305] hover:bg-[#F9F5F0]"
+                                        className="border-gray-200 text-gray-600 hover:bg-gray-50 p-2"
                                     >
                                         <Edit className="w-4 h-4" />
                                     </Button>
@@ -260,7 +319,7 @@ export default function CustomersPage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDeleteCustomer(customer.id)}
-                                            className="border-red-300 text-red-600 hover:bg-red-50"
+                                            className="border-red-200 text-red-600 hover:bg-red-50 p-2"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -269,17 +328,6 @@ export default function CustomersPage() {
                             </div>
                         </Card>
                     ))}
-                </div>
-            ) : (
-                <div className="text-center py-12">
-                    <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">No customers found</p>
-                    <p className="text-gray-400 text-sm mt-1">
-                        {searchQuery || roleFilter !== 'ALL'
-                            ? 'Try adjusting your search or filters'
-                            : 'Get started by adding your first customer'
-                        }
-                    </p>
                 </div>
             )}
         </div>

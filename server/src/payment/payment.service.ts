@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
 import { UsersService } from '../users/users.service';
 import { NotificationService } from '../notification/notification.service';
+import { MailService } from '../mail/mail.service';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -42,6 +43,7 @@ export class PaymentService {
         private readonly prisma: PrismaService,
         private readonly redis: RedisService,
         private readonly notificationService: NotificationService,
+        private readonly mailService: MailService,
     ) {
         const publicKey = this.configService.get('FLUTTERWAVE_PUBLIC_KEY');
         const secretKey = this.configService.get('FLUTTERWAVE_SECRET_KEY');
@@ -152,9 +154,11 @@ export class PaymentService {
                 throw new NotFoundException(`Order with ID ${orderId} not found`);
             }
 
-            const response = await this.flutterwave.Charge.initiate({
-                tx_ref: `TX-${orderId}-${Date.now()}`,
-                    amount,
+            const tx_ref = `TX-${orderId}-${Date.now()}`;
+
+            const response = await axios.post('https://api.flutterwave.com/v3/payments', {
+                tx_ref,
+                amount,
                 currency: 'NGN',
                 payment_options: paymentMethod,
                 redirect_url: `${this.configService.get('FRONTEND_URL')}/payment/verify`,
@@ -168,30 +172,34 @@ export class PaymentService {
                     description: `Payment for order ${orderId}`,
                     logo: `${this.configService.get('FRONTEND_URL')}/logo.png`,
                 },
-                meta: {
-                    orderId,
+                meta: { orderId },
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.configService.get('FLUTTERWAVE_SECRET_KEY')}`,
+                    'Content-Type': 'application/json',
                 },
             });
 
-            if (response.status === 'success') {
+            if (response.data?.status === 'success') {
+                const paymentData = response.data.data;
                 await this.createPaymentRecord({
                     orderId,
                     amount,
                     currency: 'NGN',
                     provider: 'flutterwave',
                     paymentMethod,
-                    transactionId: response.data.tx_ref,
-                        metadata: {
+                    transactionId: tx_ref,
+                    metadata: {
                         orderId,
                         email,
-                        transactionId: response.data.tx_ref,
-                        paymentData: response.data,
+                        transactionId: tx_ref,
+                        paymentData,
                         phone: order.phone,
                         name: order.email,
                     },
                 });
 
-                return response;
+                return paymentData; // contains link
             }
 
             throw new BadRequestException('Failed to initialize payment');
@@ -277,22 +285,8 @@ export class PaymentService {
                     throw new NotFoundException('Payment not found');
                 }
 
-                // Update payment status
-                await this.prisma.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: PaymentStatus.COMPLETED,
-                        metadata: {
-                            ...(payment.metadata as PaymentMetadata),
-                            verificationResponse: response.data,
-                        } as PaymentMetadata,
-                    },
-                });
-
-                // Update order status
-                await this.ordersService.update(payment.orderId, {
-                    status: 'PROCESSING',
-                });
+                // Delegate further processing (status update, email, notification) to a central helper
+                await this.handlePaymentSuccess(payment.orderId, 'flutterwave', response.data);
 
                 return response.data;
             }
@@ -324,22 +318,8 @@ export class PaymentService {
                     throw new NotFoundException('Payment not found');
                 }
 
-                // Update payment status
-                await this.prisma.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: PaymentStatus.COMPLETED,
-                        metadata: {
-                            ...(payment.metadata as PaymentMetadata),
-                            verificationResponse: response.data.data,
-                        } as PaymentMetadata,
-                    },
-                });
-
-                // Update order status
-                await this.ordersService.update(payment.orderId, {
-                    status: 'PROCESSING',
-                });
+                // Centralized handling
+                await this.handlePaymentSuccess(payment.orderId, 'paystack', response.data.data);
 
                 return response.data.data;
             }
@@ -383,13 +363,15 @@ export class PaymentService {
                 throw new NotFoundException(`Order with ID ${orderId} not found`);
             }
 
-            // Update order status
-            await this.ordersService.update(orderId, {
-                status: 'PROCESSING',
-            });
+            // Update order status only if not already updated (prevent duplicate processing)
+            if (order.status === 'PENDING') {
+                await this.ordersService.update(orderId, {
+                    status: 'PROCESSING',
+                });
+            }
 
-            // Send notification to user
-            if (order.userId) {
+            // Send notification to user (only once)
+            if (order.userId && order.status === 'PENDING') {
                 await this.sendPaymentNotification(
                     order.userId,
                     'payment_success',
@@ -399,6 +381,15 @@ export class PaymentService {
                         paymentProvider,
                     }
                 );
+            }
+
+            // Send order confirmation email once
+            if (order.status === 'PENDING') {
+                try {
+                    await this.mailService.sendOrderConfirmationEmail(order.email, order);
+                } catch (emailErr) {
+                    this.logger.error('Failed to send order confirmation email:', emailErr);
+                }
             }
 
             return {

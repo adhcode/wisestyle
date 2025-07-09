@@ -98,14 +98,7 @@ export class OrdersService {
 
             this.logger.log('Order created successfully:', order);
 
-            // Send order confirmation email
-            try {
-                await this.mailService.sendOrderConfirmationEmail(data.email, order);
-                this.logger.log('Order confirmation email sent successfully');
-            } catch (error) {
-                this.logger.error('Failed to send order confirmation email:', error);
-                // Don't throw the error as the order was created successfully
-            }
+            // Email will be sent after successful payment processing
 
             return order;
         } catch (error) {
@@ -136,10 +129,37 @@ export class OrdersService {
     }
 
     async updateStatus(id: string, status: string) {
-        return this.prisma.order.update({
+        const updatedOrder = await this.prisma.order.update({
             where: { id },
-            data: { status: status as any }
+            data: { status: status as any },
+            include: {
+                items: {
+                    include: {
+                        product: true,
+                    },
+                },
+            },
         });
+
+        // Send shipped email when status is SHIPPED
+        if (status === 'SHIPPED') {
+            try {
+                await this.mailService.sendOrderShippedEmail(updatedOrder.email, updatedOrder as any);
+            } catch (err) {
+                this.logger.error('Failed to send order shipped email:', err);
+            }
+        }
+
+        // Send delivered email when status is DELIVERED
+        if (status === 'DELIVERED') {
+            try {
+                await this.mailService.sendOrderDeliveredEmail(updatedOrder.email, updatedOrder as any);
+            } catch (err) {
+                this.logger.error('Failed to send order delivered email:', err);
+            }
+        }
+
+        return updatedOrder;
     }
 
     async getOrdersByStatus(status: string) {

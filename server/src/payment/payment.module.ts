@@ -6,6 +6,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { UsersModule } from '../users/users.module';
 import { RedisModule } from '../redis/redis.module';
 import { NotificationModule } from '../notification/notification.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { NotificationModule } from '../notification/notification.module';
     OrdersModule,
     UsersModule,
     RedisModule,
-    NotificationModule
+    NotificationModule,
+    MailModule
   ],
   controllers: [PaymentController],
   providers: [PaymentService],

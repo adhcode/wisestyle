@@ -16,10 +16,10 @@ export default function Footer() {
                         <div>
                             <h4 className="text-[20px] font-[500] mb-4 text-[#3B2305]">Policy</h4>
                             <ul className="space-y-3">
-                                <li><Link href="/policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305] ">Return</Link></li>
-                                <li><Link href="/best-sellers" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]    ">Shipping</Link></li>
-                                <li><Link href="/collections" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Privacy</Link></li>
-
+                                <li><Link href="/returns-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Returns & Refunds</Link></li>
+                                <li><Link href="/shipping-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Shipping & Delivery</Link></li>
+                                <li><Link href="/privacy-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Privacy Policy</Link></li>
+                                <li><Link href="/terms-conditions" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Terms & Conditions</Link></li>
                             </ul>
                         </div>
                         <div>
