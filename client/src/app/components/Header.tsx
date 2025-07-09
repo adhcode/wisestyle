@@ -123,11 +123,11 @@ export default function Header() {
                         </Link>
                     </div>
                     {/* Icons */}
-                    <div className="flex items-center justify-center md:ml-auto" style={{ width: 160 }}>
+                    <div className="flex items-center justify-center gap-2" style={{ width: '140px' }}>
                         {/* Search with dropdown */}
                         <div className="relative" ref={searchRef}>
                             <button
-                                className="text-[#3B2305] hover:text-[#C97203] mx-1"
+                                className="text-[#3B2305] hover:text-[#C97203] flex items-center justify-center w-8 h-8"
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                             >
                                 <Image src="/images/icons/search.png" alt="Search" width={20} height={20} />
@@ -135,7 +135,7 @@ export default function Header() {
 
                             {/* Search Dropdown */}
                             {isSearchOpen && (
-                                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                <div className="absolute left-[0px] transform -translate-x-1/2 md:right-0 md:left-auto md:transform-none mt-2 w-80 max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                                     <form onSubmit={handleSearch} className="p-4">
                                         <div className="flex gap-2">
                                             <input
@@ -162,7 +162,7 @@ export default function Header() {
                         </div>
 
                         {/* Wishlist with counter */}
-                        <Link href="/wishlist" className="text-[#3B2305] hover:text-[#C97203] relative mx-1">
+                        <Link href="/wishlist" className="text-[#3B2305] hover:text-[#C97203] relative flex items-center justify-center w-8 h-8">
                             <Image src="/images/icons/wishlist.png" alt="Heart" width={20} height={20} />
                             {likedProducts.length > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
@@ -172,7 +172,7 @@ export default function Header() {
                         </Link>
 
                         {/* Cart with counter */}
-                        <Link href="/cart" className="text-[#3B2305] hover:text-[#C97203] relative mx-1">
+                        <Link href="/cart" className="text-[#3B2305] hover:text-[#C97203] relative flex items-center justify-center w-8 h-8">
                             <Image src="/images/icons/cart.png" alt="Cart" width={20} height={20} />
                             {totalItems > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-[#C97203] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
@@ -181,7 +181,7 @@ export default function Header() {
                             )}
                         </Link>
 
-                        <Link href="/profile" className="text-[#3B2305] hover:text-[#C97203] mx-1">
+                        <Link href="/profile" className="text-[#3B2305] hover:text-[#C97203] flex items-center justify-center w-8 h-8">
                             <Image src="/images/icons/profile-round.png" alt="User" width={20} height={20} />
                         </Link>
                     </div>
