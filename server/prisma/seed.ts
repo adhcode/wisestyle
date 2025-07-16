@@ -246,6 +246,7 @@ async function main() {
 
   // Create sizes
   const sizes = await Promise.all([
+    // Clothing sizes
     prisma.size.upsert({
       where: { value_category: { value: 'S', category: 'clothing' } },
       update: {},
@@ -289,6 +290,134 @@ async function main() {
         name: 'Double Extra Large',
         value: 'XXL',
         category: 'clothing',
+      },
+    }),
+    // Footwear sizes
+    prisma.size.upsert({
+      where: { value_category: { value: '40', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 40',
+        value: '40',
+        category: 'footwear',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '41', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 41',
+        value: '41',
+        category: 'footwear',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '42', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 42',
+        value: '42',
+        category: 'footwear',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '43', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 43',
+        value: '43',
+        category: 'footwear',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '44', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 44',
+        value: '44',
+        category: 'footwear',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '45', category: 'footwear' } },
+      update: {},
+      create: {
+        name: 'Size 45',
+        value: '45',
+        category: 'footwear',
+      },
+    }),
+    // Trouser waist sizes
+    prisma.size.upsert({
+      where: { value_category: { value: '30', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 30',
+        value: '30',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '31', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 31',
+        value: '31',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '32', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 32',
+        value: '32',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '33', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 33',
+        value: '33',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '34', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 34',
+        value: '34',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '36', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 36',
+        value: '36',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '38', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 38',
+        value: '38',
+        category: 'trousers',
+      },
+    }),
+    prisma.size.upsert({
+      where: { value_category: { value: '40', category: 'trousers' } },
+      update: {},
+      create: {
+        name: 'Waist 40',
+        value: '40',
+        category: 'trousers',
       },
     }),
   ]);
@@ -338,6 +467,15 @@ async function main() {
         name: 'Gray',
         value: 'gray',
         class: 'bg-gray-500',
+      },
+    }),
+    prisma.color.upsert({
+      where: { value: 'As Seen' },
+      update: {},
+      create: {
+        name: 'As Seen',
+        value: 'As Seen',
+        class: 'bg-gradient-to-r from-gray-400 to-gray-600',
       },
     }),
   ]);

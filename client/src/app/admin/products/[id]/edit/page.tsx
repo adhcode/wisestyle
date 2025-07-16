@@ -7,7 +7,9 @@ import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { ProductService } from '@/services/product.service';
-import { Product } from '@/types/product';
+import { Product, Category } from '@/types/product';
+import { CategoryService } from '@/services/category.service';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface EditFormData {
     name: string;
@@ -48,29 +50,73 @@ export default function EditProductPage() {
     });
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newTag, setNewTag] = useState('');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
+
+    // Get available sizes based on category
+    const getAvailableSizes = (categoryId: string) => {
+        // Find the category by ID
+        const findCategory = (categories: Category[], id: string): Category | null => {
+            for (const category of categories) {
+                if (category.id === id) return category;
+                if (category.children) {
+                    const found = findCategory(category.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const category = findCategory(categories, categoryId);
+        if (!category) return [];
+
+        // Get category name and check for specific patterns
+        const categoryName = category.name.toLowerCase();
+
+        // Footwear sizes (40, 41, 42, 43, 44, 45)
+        if (categoryName.includes('footwear') || categoryName.includes('shoe') || categoryName.includes('sneaker') || categoryName.includes('boot')) {
+            return ['40', '41', '42', '43', '44', '45'];
+        }
+
+        // Trouser/Jeans waist sizes (30, 31, 32, 33, 34, 36, 38, 40)
+        if (categoryName.includes('trouser') || categoryName.includes('jean') || categoryName.includes('pant') || categoryName.includes('bottom')) {
+            return ['30', '31', '32', '33', '34', '36', '38', '40'];
+        }
+
+        // Shirt sizes (XS, S, M, L, XL, XXL)
+        if (categoryName.includes('shirt') || categoryName.includes('top') || categoryName.includes('t-shirt') || categoryName.includes('polo')) {
+            return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+        }
+
+        // Accessories and watches (ONE SIZE)
+        if (categoryName.includes('accessory') || categoryName.includes('watch') || categoryName.includes('bag') || categoryName.includes('hat')) {
+            return ['ONE SIZE'];
+        }
+
+        // Default clothing sizes
+        return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    };
 
     useEffect(() => {
-        const fetchProduct = async () => {
+        const fetchData = async () => {
             try {
-                // First try to get by ID, then fallback to getting all products
-                let productData: Product | undefined;
-                try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/products/${productId}`);
-                    if (response.ok) {
-                        productData = await response.json();
-                    }
-                } catch (error) {
-                    console.log('Direct fetch failed, trying fallback...');
-                }
+                // Fetch categories first
+                const categoriesData = await CategoryService.getCategoryTree();
+                setCategories(categoriesData);
+                setLoadingCategories(false);
 
-                if (!productData) {
+                // Get product by ID using ProductService
+                let productData: Product;
+                try {
+                    productData = await ProductService.getProductById(productId);
+                } catch (error) {
+                    console.log('Product not found by ID, trying fallback...');
                     // Fallback: get all products and find by ID
                     const allProducts = await ProductService.getProducts(1, 1000);
                     productData = allProducts.find(p => p.id === productId);
-                }
-
-                if (!productData) {
-                    throw new Error('Product not found');
+                    if (!productData) {
+                        throw new Error('Product not found');
+                    }
                 }
 
                 setProduct(productData);
@@ -93,8 +139,8 @@ export default function EditProductPage() {
                     isLimited: productData.isLimited || false
                 });
             } catch (error) {
-                console.error('Error fetching product:', error);
-                toast.error('Failed to load product');
+                console.error('Error fetching data:', error);
+                toast.error('Failed to load data');
                 router.push('/admin/products');
             } finally {
                 setLoading(false);
@@ -102,7 +148,7 @@ export default function EditProductPage() {
         };
 
         if (productId) {
-            fetchProduct();
+            fetchData();
         }
     }, [productId, router]);
 
@@ -131,18 +177,7 @@ export default function EditProductPage() {
 
             console.log('Sending update data:', updateData);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/products/${product.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updateData),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || 'Failed to update product');
-            }
+            await ProductService.updateProduct(product.id, updateData);
 
             toast.success('Product updated successfully');
             router.push('/admin/products');
@@ -266,14 +301,13 @@ export default function EditProductPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Price (₦) *
                                 </label>
-                                <input
-                                    type="number"
+                                <NumberInput
                                     value={formData.price}
-                                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
-                                    required
-                                    min="0"
-                                    step="0.01"
+                                    onChange={(value) => handleInputChange('price', value)}
+                                    placeholder="Enter price"
+                                    min={0}
+                                    step={100}
+                                    className="w-full"
                                 />
                             </div>
                         </div>
@@ -283,14 +317,13 @@ export default function EditProductPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Original Price (₦)
                                 </label>
-                                <input
-                                    type="number"
-                                    value={formData.originalPrice || ''}
-                                    onChange={(e) => handleInputChange('originalPrice', parseFloat(e.target.value) || undefined)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="Higher than sale price"
+                                <NumberInput
+                                    value={formData.originalPrice || 0}
+                                    onChange={(value) => handleInputChange('originalPrice', value)}
+                                    placeholder="Enter original price"
+                                    min={0}
+                                    step={100}
+                                    className="w-full"
                                 />
                             </div>
 
@@ -457,13 +490,18 @@ export default function EditProductPage() {
                                         }
                                     }}
                                     className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
+                                    disabled={loadingCategories}
                                 >
                                     <option value="">Select a size</option>
-                                    {['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'].map(size => (
-                                        <option key={size} value={size} disabled={formData.sizes.includes(size)}>
-                                            {size}
-                                        </option>
-                                    ))}
+                                    {formData.categoryId ? (
+                                        getAvailableSizes(formData.categoryId).map(size => (
+                                            <option key={size} value={size} disabled={formData.sizes.includes(size)}>
+                                                {size}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="" disabled>Please select a category first</option>
+                                    )}
                                 </select>
                             </div>
                         </div>
@@ -479,11 +517,17 @@ export default function EditProductPage() {
                                         key={index}
                                         className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-[#F9F5F0] text-[#3B2305] border"
                                     >
-                                        <span
-                                            className="w-4 h-4 rounded-full mr-2 border border-gray-300"
-                                            style={{ backgroundColor: color.toLowerCase() }}
-                                        ></span>
-                                        {color}
+                                        {color === 'As Seen' ? (
+                                            <span className="text-sm font-medium">As Seen</span>
+                                        ) : (
+                                            <>
+                                                <span
+                                                    className="w-4 h-4 rounded-full mr-2 border border-gray-300"
+                                                    style={{ backgroundColor: color.toLowerCase() }}
+                                                ></span>
+                                                <span>{color}</span>
+                                            </>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => setFormData(prev => ({
@@ -511,7 +555,7 @@ export default function EditProductPage() {
                                     className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
                                 >
                                     <option value="">Select a color</option>
-                                    {['Black', 'White', 'Gray', 'Navy', 'Blue', 'Red', 'Green', 'Yellow', 'Purple', 'Brown', 'Pink', 'Orange'].map(color => (
+                                    {['Black', 'White', 'Gray', 'Navy', 'Blue', 'Red', 'Green', 'Yellow', 'Purple', 'Brown', 'Pink', 'Orange', 'As Seen'].map(color => (
                                         <option key={color} value={color} disabled={formData.colors.includes(color)}>
                                             {color}
                                         </option>

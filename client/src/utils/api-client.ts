@@ -61,10 +61,11 @@ class ApiClient {
     if (requireAuth) {
       // Use the Authorization header from axios defaults if it exists
       const authHeader = axios.defaults.headers.common['Authorization'] as string | undefined;
-      if (!authHeader) {
-        throw new Error('No authentication token available');
+      if (authHeader) {
+        headers['Authorization'] = authHeader;
       }
-      headers['Authorization'] = authHeader;
+      // Note: We don't throw an error if no auth header is found
+      // because the backend will handle authentication via cookies
     }
 
     return headers;
@@ -138,17 +139,12 @@ class ApiClient {
           axios.get(`${API_URL}${url}`, {
             headers: this.getHeaders(requireAuth),
             params,
+            withCredentials: true,
           }),
           resource
         );
         return await response;
       } catch (error) {
-        if (error instanceof Error && error.message === 'No authentication token available') {
-          window.dispatchEvent(new CustomEvent('auth:signout', {
-            detail: { redirectUrl: window.location.pathname }
-          }));
-        }
-        
         // Handle rate limiting with exponential backoff
         if (error instanceof RateLimitError && retryCount < 3) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), error.retryAfter * 1000);
@@ -178,16 +174,11 @@ class ApiClient {
             ...this.getHeaders(requireAuth),
             ...headers,
           },
+          withCredentials: true,
         }),
         resource
       );
     } catch (error) {
-      if (error instanceof Error && error.message === 'No authentication token available') {
-        window.dispatchEvent(new CustomEvent('auth:signout', {
-          detail: { redirectUrl: window.location.pathname }
-        }));
-      }
-      
       // Handle rate limiting with exponential backoff
       if (error instanceof RateLimitError && retryCount < 3) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), error.retryAfter * 1000);
@@ -206,16 +197,11 @@ class ApiClient {
       return await this.handleResponse(
         axios.put(`${API_URL}${url}`, data, {
           headers: this.getHeaders(requireAuth),
+          withCredentials: true,
         }),
         resource
       );
     } catch (error) {
-      if (error instanceof Error && error.message === 'No authentication token available') {
-        window.dispatchEvent(new CustomEvent('auth:signout', {
-          detail: { redirectUrl: window.location.pathname }
-        }));
-      }
-      
       // Handle rate limiting with exponential backoff
       if (error instanceof RateLimitError && retryCount < 3) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), error.retryAfter * 1000);
@@ -229,21 +215,39 @@ class ApiClient {
     }
   }
 
+  async patch<T>(url: string, data?: any, requireAuth = true, resource = 'Resource', retryCount = 0): Promise<T> {
+    try {
+      return await this.handleResponse(
+        axios.patch(`${API_URL}${url}`, data, {
+          headers: this.getHeaders(requireAuth),
+          withCredentials: true,
+        }),
+        resource
+      );
+    } catch (error) {
+      // Handle rate limiting with exponential backoff
+      if (error instanceof RateLimitError && retryCount < 3) {
+        const delay = Math.min(1000 * Math.pow(2, retryCount), error.retryAfter * 1000);
+        console.log(`Rate limited. Retrying in ${delay / 1000} seconds...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.patch<T>(url, data, requireAuth, resource, retryCount + 1);
+      }
+      
+      throw error;
+    }
+  }
+
   async delete<T>(url: string, requireAuth = true, resource = 'Resource', retryCount = 0): Promise<T> {
     try {
       return await this.handleResponse(
         axios.delete(`${API_URL}${url}`, {
           headers: this.getHeaders(requireAuth),
+          withCredentials: true,
         }),
         resource
       );
     } catch (error) {
-      if (error instanceof Error && error.message === 'No authentication token available') {
-        window.dispatchEvent(new CustomEvent('auth:signout', {
-          detail: { redirectUrl: window.location.pathname }
-        }));
-      }
-      
       // Handle rate limiting with exponential backoff
       if (error instanceof RateLimitError && retryCount < 3) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), error.retryAfter * 1000);

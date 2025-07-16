@@ -8,6 +8,7 @@ import Link from 'next/link';
 import ShopByCategory from './components/ShopByCategory';
 import StyleAndSubstance from './components/StyleAndSubstance';
 import TrendingNow from './components/TrendingNow';
+import Reviews from './components/Reviews';
 
 interface HomepageSection {
     id: string;
@@ -60,7 +61,7 @@ export default function Home() {
             <ShopByCategory />
             <StyleAndSubstance />
             <TrendingNow />
-
+            <Reviews />
         </main>
     );
 } 

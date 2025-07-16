@@ -39,8 +39,8 @@ export default function ShippingPolicyPage() {
                         <div className="hidden md:block text-[#3B2305]">|</div>
                         <div className="flex items-center gap-2">
                             <Mail className="w-5 h-5 text-[#C97203]" />
-                            <a href="mailto:info@wisestyle.com" className="text-[#1E1E1E] font-medium hover:text-[#C97203]">
-                                info@wisestyle.com
+                            <a href="mailto:hello@wisestyleshop.com" className="text-[#1E1E1E] font-medium hover:text-[#C97203]">
+                                hello@wisestyleshop.com
                             </a>
                         </div>
                     </div>
@@ -211,11 +211,11 @@ export default function ShippingPolicyPage() {
                                     Call us: +234 814 833 1000
                                 </a>
                                 <a
-                                    href="mailto:info@wisestyle.com"
+                                    href="mailto:hello@wisestyleshop.com"
                                     className="flex items-center gap-2 border border-white text-white px-6 py-3 rounded-lg hover:bg-white hover:text-[#1E1E1E] transition-colors"
                                 >
                                     <Mail className="w-5 h-5" />
-                                    Email: info@wisestyle.com
+                                    Email: hello@wisestyleshop.com
                                 </a>
                             </div>
                         </div>

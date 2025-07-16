@@ -438,7 +438,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                                         Questions about shipping? Contact us at{' '}
                                         <a href="tel:+2348148331000" className="text-[#C97203] hover:underline">+234 814 833 1000</a>
                                         {' '}or{' '}
-                                        <a href="mailto:info@wisestyle.com" className="text-[#C97203] hover:underline">info@wisestyle.com</a>
+                                        <a href="mailto:hello@wisestyleshop.com" className="text-[#C97203] hover:underline">hello@wisestyleshop.com</a>
                                     </p>
                                 </div>
                             </div>
@@ -486,7 +486,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             {/* Related products section */}
             {relatedProducts.length > 0 && (
                 <div className="max-w-[1200px] mx-auto px-4 pt-10 pb-16">
-                    <h2 className="text-lg font-semibold text-[#1E1E1E] mb-4">The item can be cool with</h2>
+                    <h2 className="text-lg font-semibold text-[#1E1E1E] mb-4">You May Also like</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {relatedProducts.map((rel) => (
                             <Link href={`/product/${rel.slug}`} key={rel.id} className="group block bg-white rounded overflow-hidden shadow hover:shadow-md transition-shadow">

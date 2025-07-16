@@ -8,7 +8,7 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function main() {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@wisestyle.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'hello@wisestyleshop.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 

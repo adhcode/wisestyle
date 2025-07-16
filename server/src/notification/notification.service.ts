@@ -42,7 +42,7 @@ export class NotificationService {
 
             const msg = {
                 to: email,
-                from: this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'noreply@wisestyle.com',
+                from: this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'hello@wisestyleshop.com',
                 templateId,
                 dynamicTemplateData: {
                     ...data,
@@ -83,7 +83,7 @@ export class NotificationService {
 
             const msg = {
                 to: email,
-                from: this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'noreply@wisestyle.com',
+                from: this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'hello@wisestyleshop.com',
                 templateId,
                 dynamicTemplateData: {
                     ...data,

@@ -75,11 +75,14 @@ export class ProductsService {
           where: { value: colorValue }
         });
         if (existingColor) return existingColor;
+        
+        // Handle "As Seen" color specially
+        const isAsSeen = colorValue === 'As Seen';
         return this.prisma.color.create({
           data: {
             name: colorValue,
             value: colorValue,
-            class: `bg-[${colorValue}]`
+            class: isAsSeen ? 'bg-gradient-to-r from-gray-400 to-gray-600' : `bg-[${colorValue}]`
           }
         });
       });
@@ -466,11 +469,14 @@ export class ProductsService {
               where: { value: colorValue }
             });
             if (existingColor) return existingColor;
+            
+            // Handle "As Seen" color specially
+            const isAsSeen = colorValue === 'As Seen';
             return this.prisma.color.create({
               data: {
                 name: colorValue,
                 value: colorValue,
-                class: `bg-[${colorValue}]`
+                class: isAsSeen ? 'bg-gradient-to-r from-gray-400 to-gray-600' : `bg-[${colorValue}]`
               }
             });
           })
@@ -551,7 +557,25 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    return this.prisma.product.delete({
+    // Use a transaction to ensure all related data is deleted properly
+    return this.prisma.$transaction(async (tx) => {
+      // Delete related order items first
+      await tx.orderItem.deleteMany({
+        where: { productId: id }
+      });
+
+      // Delete related images
+      await tx.image.deleteMany({
+        where: { productId: id }
+      });
+
+      // Delete related inventory
+      await tx.productInventory.deleteMany({
+        where: { productId: id }
+      });
+
+      // Delete the product (this will also remove the many-to-many relationships with sizes and colors)
+      const deletedProduct = await tx.product.delete({
       where: { id },
       include: {
         category: true,
@@ -565,6 +589,12 @@ export class ProductsService {
           }
         }
       },
+      });
+
+      // Invalidate homepage sections cache
+      await this.redisService.del('homepage_sections');
+
+      return deletedProduct;
     });
   }
 

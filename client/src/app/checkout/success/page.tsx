@@ -80,8 +80,8 @@ export default function SuccessPage() {
                     <div className="mt-8 pt-8 border-t border-gray-200">
                         <p className="text-sm text-gray-600 text-center">
                             Need help? Contact our support team at{' '}
-                            <a href="mailto:support@wisestyle.com" className="text-black hover:underline">
-                                support@wisestyle.com
+                            <a href="mailto:hello@wisestyleshop.com" className="text-black hover:underline">
+                                hello@wisestyleshop.com
                             </a>
                         </p>
                     </div>

@@ -35,7 +35,7 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState<AdminSettings>({
         siteName: 'WiseStyle',
         siteDescription: 'Premium African Fashion Store',
-        adminEmail: 'admin@wisestyle.com',
+        adminEmail: 'hello@wisestyleshop.com',
         allowRegistrations: true,
         emailVerificationRequired: true,
         maintenanceMode: false,

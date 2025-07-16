@@ -12,6 +12,10 @@ export const ProductService = {
         return apiClient.get('/api/products', false, { page, limit });
     },
 
+    async getProductById(id: string): Promise<Product> {
+        return apiClient.get(`/api/products/id/${id}`, false);
+    },
+
     async getProductBySlug(slug: string): Promise<Product> {
         return apiClient.get(`/api/products/slug/${slug}`, false);
     },
@@ -58,20 +62,11 @@ export const ProductService = {
     },
 
     async createProduct(productData: ProductFormData): Promise<Product> {
-        const response = await fetch('/api/products', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(productData),
-        });
+        return apiClient.post('/api/products', productData, true);
+    },
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            throw new Error(errorData?.message || 'Failed to create product');
-        }
-
-        return response.json();
+    async updateProduct(productId: string, productData: Partial<ProductFormData>): Promise<Product> {
+        return apiClient.patch(`/api/products/${productId}`, productData, true);
     },
 
     async deleteProduct(productId: string): Promise<void> {

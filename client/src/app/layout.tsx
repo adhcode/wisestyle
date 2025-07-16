@@ -4,6 +4,7 @@ import './globals.css';
 import Providers from './providers';
 import { Toaster } from 'react-hot-toast';
 import ConditionalLayout from './ConditionalLayout';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const outfit = Outfit({ subsets: ['latin'] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
                     <ConditionalLayout>
                         {children}
                     </ConditionalLayout>
+                    <WhatsAppButton />
                     <Toaster position="bottom-center" />
                 </Providers>
             </body>

@@ -17,6 +17,7 @@ import { toast } from 'react-hot-toast';
 import { ProductService } from '@/services/product.service';
 import { CategoryService } from '@/services/category.service';
 import Image from 'next/image';
+import NumberInput from '@/components/ui/NumberInput';
 
 const displaySections = [
     { value: 'NONE', label: 'None' },
@@ -37,6 +38,7 @@ const AVAILABLE_COLORS = [
     { name: 'Yellow', value: '#FFFF00' },
     { name: 'Brown', value: '#964B00' },
     { name: 'Gray', value: '#808080' },
+    { name: 'As Seen', value: 'as-seen' },
 ];
 
 export default function NewProductPage() {
@@ -74,22 +76,46 @@ export default function NewProductPage() {
 
     // Get available sizes based on category
     const getAvailableSizes = (categoryId: string) => {
-        switch (categoryId) {
-            case 'cm9yfz37s000137mqjt6tedny': // Shirts
-                return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-            case 'cm9yfz38u000237mqupwl2ua2': // Bottoms
-                return ['28', '30', '32', '34', '36', '38'];
-            case 'cm9yfz39s000337mqgzbk91wn': // Footwears
-                return ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
-            case 'cm9yfz39y000437mqwggxil0e': // Accessories
-                return ['ONE SIZE'];
-            case 'cm9yfz3a3000537mq465axsth': // Activewears
-                return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-            case 'cm9yfz3ab000637mq798k8i7u': // Watches
-                return ['ONE SIZE'];
-            default:
-                return [];
+        // Find the category by ID
+        const findCategory = (categories: Category[], id: string): Category | null => {
+            for (const category of categories) {
+                if (category.id === id) return category;
+                if (category.children) {
+                    const found = findCategory(category.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const category = findCategory(categories, categoryId);
+        if (!category) return [];
+
+        // Get category name and check for specific patterns
+        const categoryName = category.name.toLowerCase();
+
+        // Footwear sizes (40, 41, 42, 43, 44, 45)
+        if (categoryName.includes('footwear') || categoryName.includes('shoe') || categoryName.includes('sneaker') || categoryName.includes('boot')) {
+            return ['40', '41', '42', '43', '44', '45'];
         }
+
+        // Trouser/Jeans waist sizes (30, 31, 32, 33, 34, 36, 38, 40)
+        if (categoryName.includes('trouser') || categoryName.includes('jean') || categoryName.includes('pant') || categoryName.includes('bottom')) {
+            return ['30', '31', '32', '33', '34', '36', '38', '40'];
+        }
+
+        // Shirt sizes (XS, S, M, L, XL, XXL)
+        if (categoryName.includes('shirt') || categoryName.includes('top') || categoryName.includes('t-shirt') || categoryName.includes('polo')) {
+            return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+        }
+
+        // Accessories and watches (ONE SIZE)
+        if (categoryName.includes('accessory') || categoryName.includes('watch') || categoryName.includes('bag') || categoryName.includes('hat')) {
+            return ['ONE SIZE'];
+        }
+
+        // Default clothing sizes
+        return ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
     };
 
     useEffect(() => {
@@ -124,12 +150,15 @@ export default function NewProductPage() {
                 newInventory[size] = sizeInventory[size] || 0;
             });
             setSizeInventory(newInventory);
+
+            // Clear selected sizes that are no longer available for this category
+            setSelectedSizes(prev => prev.filter(size => availableSizes.includes(size)));
             setFormData(prev => ({
                 ...prev,
                 sizes: prev.sizes.filter(size => availableSizes.includes(size))
             }));
         }
-    }, [formData.categoryId]);
+    }, [formData.categoryId, categories]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -418,12 +447,13 @@ export default function NewProductPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Price (₦)
                                 </label>
-                                <input
-                                    type="number"
-                                    required
+                                <NumberInput
                                     value={formData.price}
-                                    onChange={e => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-                                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305]"
+                                    onChange={(value) => setFormData(prev => ({ ...prev, price: value }))}
+                                    placeholder="Enter price"
+                                    min={0}
+                                    step={100}
+                                    className="w-full"
                                 />
                             </div>
 
@@ -431,11 +461,13 @@ export default function NewProductPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Original Price (₦)
                                 </label>
-                                <input
-                                    type="number"
+                                <NumberInput
                                     value={formData.originalPrice}
-                                    onChange={e => setFormData(prev => ({ ...prev, originalPrice: Number(e.target.value) }))}
-                                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305]"
+                                    onChange={(value) => setFormData(prev => ({ ...prev, originalPrice: value }))}
+                                    placeholder="Enter original price"
+                                    min={0}
+                                    step={100}
+                                    className="w-full"
                                 />
                             </div>
 
@@ -621,19 +653,23 @@ export default function NewProductPage() {
                                     Available Sizes
                                 </label>
                                 <div className="flex flex-wrap gap-2">
-                                    {AVAILABLE_SIZES.map(size => (
-                                        <button
-                                            key={size}
-                                            type="button"
-                                            onClick={() => handleSizeToggle(size)}
-                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectedSizes.includes(size)
-                                                ? 'bg-[#3B2305] text-white'
-                                                : 'bg-white text-[#3B2305] border border-[#3B2305] hover:bg-[#F9F5F0]'
-                                                }`}
-                                        >
-                                            {size}
-                                        </button>
-                                    ))}
+                                    {formData.categoryId ? (
+                                        getAvailableSizes(formData.categoryId).map(size => (
+                                            <button
+                                                key={size}
+                                                type="button"
+                                                onClick={() => handleSizeToggle(size)}
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectedSizes.includes(size)
+                                                    ? 'bg-[#3B2305] text-white'
+                                                    : 'bg-white text-[#3B2305] border border-[#3B2305] hover:bg-[#F9F5F0]'
+                                                    }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-gray-500">Please select a category first to see available sizes</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -652,11 +688,17 @@ export default function NewProductPage() {
                                                 : 'bg-white text-[#3B2305] border border-[#3B2305] hover:bg-[#F9F5F0]'
                                                 }`}
                                         >
-                                            <div
-                                                className="w-4 h-4 rounded-full border border-gray-300"
-                                                style={{ backgroundColor: color.value }}
-                                            />
-                                            <span>{color.name}</span>
+                                            {color.value === 'as-seen' ? (
+                                                <span className="text-sm font-medium">As Seen</span>
+                                            ) : (
+                                                <>
+                                                    <div
+                                                        className="w-4 h-4 rounded-full border border-gray-300"
+                                                        style={{ backgroundColor: color.value }}
+                                                    />
+                                                    <span>{color.name}</span>
+                                                </>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -672,7 +714,9 @@ export default function NewProductPage() {
                                             selectedColors.map(color => (
                                                 <div key={`${size}-${color}`} className="flex items-center space-x-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-medium text-gray-700">{size} - {color}</div>
+                                                        <div className="text-sm font-medium text-gray-700">
+                                                            {size} - {color}
+                                                        </div>
                                                         <input
                                                             type="number"
                                                             min="0"
@@ -765,10 +809,14 @@ export default function NewProductPage() {
                                         if (quantity > 0) {
                                             return (
                                                 <div key={`${sizeId}-${colorId}`} className="flex items-center gap-2">
-                                                    <div
-                                                        className="w-6 h-6 rounded-full"
-                                                        style={{ backgroundColor: colorId }}
-                                                    />
+                                                    {colorId === 'As Seen' ? (
+                                                        <span className="text-sm font-medium text-gray-700">As Seen</span>
+                                                    ) : (
+                                                        <div
+                                                            className="w-6 h-6 rounded-full"
+                                                            style={{ backgroundColor: colorId }}
+                                                        />
+                                                    )}
                                                     <span>{quantity} units</span>
                                                 </div>
                                             );

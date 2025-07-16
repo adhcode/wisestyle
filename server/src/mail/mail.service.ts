@@ -19,7 +19,7 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     const sendGridApiKey = this.configService.get<string>('SENDGRID_API_KEY');
-    this.fromEmail = this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'noreply@wisestyle.com';
+            this.fromEmail = this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'hello@wisestyleshop.com';
 
     if (sendGridApiKey) {
       // Prefer SendGrid if API key is provided
@@ -94,13 +94,27 @@ export class MailService {
       try {
         const msg = {
           to,
-          from: this.fromEmail,
+          from: {
+            email: this.fromEmail,
+            name: 'WiseStyle'
+          },
           subject,
           html,
           text: htmlToText(html),
           headers: {
-            'List-Unsubscribe': '<mailto:unsubscribe@wisestyleshop.com>'
+            'List-Unsubscribe': '<mailto:hello@wisestyleshop.com>',
+            'X-Mailer': 'WiseStyle Email Service',
+            'X-Priority': '3',
+            'X-MSMail-Priority': 'Normal',
+            'Importance': 'Normal',
+            'X-Campaign': 'order-confirmation',
+            'X-Report-Abuse': 'Please report abuse here: hello@wisestyleshop.com'
           },
+          categories: ['order-confirmation'],
+          customArgs: {
+            email_type: 'order_confirmation',
+            user_type: 'customer'
+          }
         } as any;
         const [response] = await sgMail.send(msg);
         console.log('SendGrid email sent', response.statusCode);
@@ -120,8 +134,16 @@ export class MailService {
         html,
         text: htmlToText(html),
         headers: {
-          'List-Unsubscribe': '<mailto:unsubscribe@wisestyleshop.com>'
+          'List-Unsubscribe': '<mailto:unsubscribe@wisestyle.com>',
+          'X-Mailer': 'WiseStyle Email Service',
+          'X-Priority': '3',
+          'X-MSMail-Priority': 'Normal',
+          'Importance': 'Normal',
+          'X-Campaign': 'order-confirmation',
+          'X-Report-Abuse': 'Please report abuse here: abuse@wisestyle.com'
         },
+        priority: 'normal' as const,
+        encoding: 'utf-8'
       };
       try {
         const info = await this.transporter.sendMail(mailOptions);
