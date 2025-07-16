@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Minus, Plus } from 'lucide-react';
 
 interface NumberInputProps {
-    value: number;
+    value: number | undefined;
     onChange: (value: number) => void;
     placeholder?: string;
     min?: number;
@@ -24,11 +24,11 @@ export default function NumberInput({
     className = "",
     disabled = false
 }: NumberInputProps) {
-    const [displayValue, setDisplayValue] = useState(value === 0 ? '' : value.toString());
+    const [displayValue, setDisplayValue] = useState(value === 0 || value === undefined ? '' : value.toString());
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setDisplayValue(value === 0 ? '' : value.toString());
+        setDisplayValue(value === 0 || value === undefined ? '' : value.toString());
     }, [value]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,24 +57,27 @@ export default function NumberInput({
     };
 
     const handleIncrement = () => {
-        const newValue = value + step;
+        const currentValue = value || 0;
+        const newValue = currentValue + step;
         if (max === undefined || newValue <= max) {
             onChange(newValue);
         }
     };
 
     const handleDecrement = () => {
-        const newValue = value - step;
+        const currentValue = value || 0;
+        const newValue = currentValue - step;
         if (newValue >= min) {
             onChange(newValue);
         }
     };
 
     const handleBlur = () => {
+        const currentValue = value || 0;
         // Ensure the value is within bounds when input loses focus
-        if (value < min) {
+        if (currentValue < min) {
             onChange(min);
-        } else if (max !== undefined && value > max) {
+        } else if (max !== undefined && currentValue > max) {
             onChange(max);
         }
     };
@@ -89,12 +92,14 @@ export default function NumberInput({
         }
     };
 
+    const currentValue = value || 0;
+
     return (
         <div className={`flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-[#3B2305] focus-within:border-transparent ${className}`}>
             <button
                 type="button"
                 onClick={handleDecrement}
-                disabled={disabled || value <= min}
+                disabled={disabled || currentValue <= min}
                 className="px-3 py-2 text-gray-500 hover:text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed border-r border-gray-300"
             >
                 <Minus className="w-4 h-4" />
@@ -115,7 +120,7 @@ export default function NumberInput({
             <button
                 type="button"
                 onClick={handleIncrement}
-                disabled={disabled || (max !== undefined && value >= max)}
+                disabled={disabled || (max !== undefined && currentValue >= max)}
                 className="px-3 py-2 text-gray-500 hover:text-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed border-l border-gray-300"
             >
                 <Plus className="w-4 h-4" />

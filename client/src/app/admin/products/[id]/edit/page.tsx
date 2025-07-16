@@ -113,10 +113,11 @@ export default function EditProductPage() {
                     console.log('Product not found by ID, trying fallback...');
                     // Fallback: get all products and find by ID
                     const allProducts = await ProductService.getProducts(1, 1000);
-                    productData = allProducts.find(p => p.id === productId);
-                    if (!productData) {
+                    const foundProduct = allProducts.find(p => p.id === productId);
+                    if (!foundProduct) {
                         throw new Error('Product not found');
                     }
+                    productData = foundProduct;
                 }
 
                 setProduct(productData);
@@ -163,8 +164,8 @@ export default function EditProductPage() {
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
-                originalPrice: formData.originalPrice || null,
-                discount: formData.discount || null,
+                originalPrice: formData.originalPrice || undefined,
+                discount: formData.discount || undefined,
                 categoryId: formData.categoryId,
                 image: formData.images[0] || '',
                 images: formData.images,
