@@ -11,7 +11,8 @@ import { CartItem } from '@/types/product';
 import { shippingMethods, ShippingMethod } from '@/data/shippingMethods';
 import Image from 'next/image';
 import { TruckIcon, CreditCardIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import AddressForm from '@/components/AddressForm';
+import NigerianAddressForm from '@/components/NigerianAddressForm';
+import ShippingZoneFinder from '@/components/ShippingZoneFinder';
 import { Input } from '@/components/ui/input';
 import Script from 'next/script';
 
@@ -48,11 +49,11 @@ export default function CheckoutPage() {
     const [email, setEmail] = useState('');
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [shippingAddress, setShippingAddress] = useState({
-        name: '', address: '', city: '', state: '', postal: '', country: 'Nigeria',
+        name: '', address: '', city: '', state: '', postal: '', country: 'Nigeria', area: '',
     });
     const [billingSame, setBillingSame] = useState(true);
     const [billingAddress, setBillingAddress] = useState({
-        name: '', address: '', city: '', state: '', postal: '', country: 'Nigeria',
+        name: '', address: '', city: '', state: '', postal: '', country: 'Nigeria', area: '',
     });
     const [contact, setContact] = useState({ email: '', phone: '' });
     const [createAccount, setCreateAccount] = useState(false);
@@ -86,6 +87,58 @@ export default function CheckoutPage() {
     const shippingCost = selectedShipping?.price || 0;
     const grandTotal = totalPrice + shippingCost;
 
+    // Helper function to ensure address has postal code and remove area field
+    const ensurePostalCode = (address: any) => {
+        const { area, ...addressWithoutArea } = address;
+        return {
+            ...addressWithoutArea,
+            postal: address.postal || '000000'
+        };
+    };
+
+    // Ensure addresses always have postal codes before sending to server
+    const getShippingAddressForOrder = () => {
+        if (selectedShipping?.type === 'pickup') {
+            return {
+                name: contact.email,
+                address: selectedShipping.address || '',
+                city: 'Lagos',
+                state: 'Lagos',
+                postal: '100001',
+                country: 'Nigeria',
+                phone: contact.phone
+            };
+        } else {
+            // Map area (LGA) to city field for server compatibility
+            const addressForServer = {
+                ...shippingAddress,
+                city: shippingAddress.area || shippingAddress.city, // Use LGA as city
+                phone: contact.phone
+            };
+            // Remove area field before sending to server
+            const { area, ...cleanAddress } = addressForServer;
+            return ensurePostalCode(cleanAddress);
+        }
+    };
+
+    const getBillingAddressForOrder = () => {
+        if (billingSame) {
+            const addressForServer = {
+                ...shippingAddress,
+                city: shippingAddress.area || shippingAddress.city
+            };
+            const { area, ...cleanAddress } = addressForServer;
+            return ensurePostalCode(cleanAddress);
+        } else {
+            const addressForServer = {
+                ...billingAddress,
+                city: billingAddress.area || billingAddress.city
+            };
+            const { area, ...cleanAddress } = addressForServer;
+            return ensurePostalCode(cleanAddress);
+        }
+    };
+
     const handleAddressChange = (type: 'shipping' | 'billing') => (field: string, value: string) => {
         if (type === 'shipping') {
             setShippingAddress(prev => ({ ...prev, [field]: value }));
@@ -110,31 +163,33 @@ export default function CheckoutPage() {
             errors.shippingMethod = 'Please select a shipping method';
         }
 
-        // Shipping Address Validation
-        if (!shippingAddress.name.trim()) {
-            errors.shippingName = 'Full name is required';
-        } else if (!validationPatterns.name.test(shippingAddress.name)) {
-            errors.shippingName = 'Please enter a valid name (2-50 characters, letters only)';
-        }
+        // Shipping Address Validation (only for shipping methods, not pickup)
+        if (selectedShipping?.type === 'shipping') {
+            if (!shippingAddress.name.trim()) {
+                errors.shippingName = 'Full name is required';
+            } else if (!validationPatterns.name.test(shippingAddress.name)) {
+                errors.shippingName = 'Please enter a valid name (2-50 characters, letters only)';
+            }
 
-        if (!shippingAddress.address.trim()) {
-            errors.shippingAddress = 'Address is required';
-        } else if (shippingAddress.address.length < 5) {
-            errors.shippingAddress = 'Please enter a complete address';
-        }
+            if (!shippingAddress.address.trim()) {
+                errors.shippingAddress = 'Address is required';
+            } else if (shippingAddress.address.length < 5) {
+                errors.shippingAddress = 'Please enter a complete address';
+            }
 
-        if (!shippingAddress.city.trim()) {
-            errors.shippingCity = 'City is required';
-        }
+            if (!shippingAddress.city.trim()) {
+                errors.shippingCity = 'City is required';
+            }
 
-        if (!shippingAddress.state.trim()) {
-            errors.shippingState = 'State is required';
-        }
+            if (!shippingAddress.area?.trim()) {
+                errors.shippingArea = 'Local Government Area is required';
+            }
 
-        if (!shippingAddress.postal.trim()) {
-            errors.shippingPostal = 'Postal code is required';
-        } else if (!validationPatterns.postal.test(shippingAddress.postal)) {
-            errors.shippingPostal = 'Please enter a valid postal code';
+            if (!shippingAddress.state.trim()) {
+                errors.shippingState = 'State is required';
+            }
+
+            // Postal code validation removed for Nigerian addresses
         }
 
         // Contact Information Validation
@@ -168,15 +223,15 @@ export default function CheckoutPage() {
                 errors.billingCity = 'Billing city is required';
             }
 
+            if (!billingAddress.area?.trim()) {
+                errors.billingArea = 'Billing Local Government Area is required';
+            }
+
             if (!billingAddress.state.trim()) {
                 errors.billingState = 'Billing state is required';
             }
 
-            if (!billingAddress.postal.trim()) {
-                errors.billingPostal = 'Billing postal code is required';
-            } else if (!validationPatterns.postal.test(billingAddress.postal)) {
-                errors.billingPostal = 'Please enter a valid postal code';
-            }
+            // Postal code validation removed for Nigerian addresses
         }
 
         if (createAccount && !password) {
@@ -217,11 +272,8 @@ export default function CheckoutPage() {
                             size: item.selectedSize
                         })),
                         total: totalPrice,
-                        shippingAddress: {
-                            ...shippingAddress,
-                            phone: contact.phone
-                        },
-                        billingAddress: billingSame ? shippingAddress : billingAddress,
+                        shippingAddress: getShippingAddressForOrder(),
+                        billingAddress: getBillingAddressForOrder(),
                         shippingMethod: selectedShipping?.name,
                         shippingCost: selectedShipping?.price || 0,
                         email: contact.email || user?.email,
@@ -331,11 +383,8 @@ export default function CheckoutPage() {
                             size: item.selectedSize
                         })),
                         total: totalPrice,
-                        shippingAddress: {
-                            ...shippingAddress,
-                            phone: contact.phone
-                        },
-                        billingAddress: billingSame ? shippingAddress : billingAddress,
+                        shippingAddress: getShippingAddressForOrder(),
+                        billingAddress: getBillingAddressForOrder(),
                         shippingMethod: selectedShipping?.name,
                         shippingCost: selectedShipping?.price || 0,
                         email: contact.email || user?.email,
@@ -351,7 +400,15 @@ export default function CheckoutPage() {
                 const order = await orderRes.json();
 
                 // 2. Initialize Paystack payment via backend
-                const initRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/initialize/paystack`, {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+                console.log('Initializing Paystack payment with:', {
+                    orderId: order.id,
+                    amount: totalPrice + (selectedShipping?.price || 0),
+                    email: contact.email || user?.email || '',
+                    apiUrl
+                });
+
+                const initRes = await fetch(`${apiUrl}/api/payments/initialize/paystack`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -363,19 +420,27 @@ export default function CheckoutPage() {
                     }),
                 });
 
+                console.log('Paystack initialization response status:', initRes.status);
+
                 if (!initRes.ok) {
-                    const errData = await initRes.json();
-                    throw new Error(errData.message || 'Failed to initialize Paystack payment');
+                    const errData = await initRes.json().catch(() => ({ message: 'Network error' }));
+                    console.error('Paystack initialization error:', errData);
+                    throw new Error(errData.message || `HTTP ${initRes.status}: Failed to initialize Paystack payment`);
                 }
 
                 const initData = await initRes.json();
+                console.log('Paystack initialization data:', initData);
 
                 if (initData.status && initData.data?.authorization_url) {
-                    window.location.href = initData.data.authorization_url as string;
+                    console.log('Redirecting to Paystack:', initData.data.authorization_url);
+                    // Add a small delay to ensure the payment record is created
+                    setTimeout(() => {
+                        window.location.href = initData.data.authorization_url as string;
+                    }, 500);
                     return;
                 }
 
-                throw new Error('Unable to initiate Paystack payment');
+                throw new Error('Unable to initiate Paystack payment - no authorization URL received');
             }
         } catch (error: unknown) {
             console.error('Payment error:', error);
@@ -469,10 +534,10 @@ export default function CheckoutPage() {
     // Validation for required fields
     const detailsValid = !!(
         selectedShipping &&
-        shippingAddress.name &&
-        shippingAddress.address &&
         contact.email &&
-        contact.phone
+        contact.phone &&
+        (selectedShipping.type === 'pickup' || 
+         (selectedShipping.type === 'shipping' && shippingAddress.name && shippingAddress.address && shippingAddress.city && shippingAddress.area))
     );
 
     // Update toggle functions
@@ -567,29 +632,42 @@ export default function CheckoutPage() {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-12 px-4 sm:px-6 lg:px-8">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                         {step === 'details' ? (
                             <>
                                 {/* Shipping Method Card */}
-                                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-                                    <div className="flex items-center justify-between mb-6">
+                                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 lg:p-6 border border-gray-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                                         <div>
-                                            <h2 className="text-lg sm:text-xl font-medium">Shipping Method</h2>
+                                            <h2 className="text-base sm:text-lg lg:text-xl font-medium">Delivery Method</h2>
                                             {selectedShipping && (
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {selectedShipping.name} - ₦{selectedShipping.price.toLocaleString()}
-                                                </p>
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                                                    {selectedShipping.type === 'pickup' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium w-fit">
+                                                            📍 Store Pickup - FREE
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium w-fit">
+                                                            🚚 Home Delivery - ₦{selectedShipping.price.toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                    <p className="text-xs sm:text-sm text-gray-500">
+                                                        {selectedShipping.deliveryTime}
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
                                         <button
                                             onClick={() => setIsShippingOpen(!isShippingOpen)}
-                                            className="text-sm text-gray-600 hover:text-black transition-colors flex items-center gap-2"
+                                            className="text-xs sm:text-sm text-gray-600 hover:text-black transition-colors flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 w-full sm:w-auto justify-center sm:justify-start"
                                         >
-                                            {selectedShipping ? 'Change' : 'Select'}
+                                            <span className="truncate">
+                                                {selectedShipping ? 'Change Method' : 'Choose Delivery'}
+                                            </span>
                                             <svg
-                                                className={`w-4 h-4 transition-transform duration-300 ${isShippingOpen ? 'rotate-180' : ''}`}
+                                                className={`w-4 h-4 transition-transform duration-300 flex-shrink-0 ${isShippingOpen ? 'rotate-180' : ''}`}
                                                 fill="none"
                                                 stroke="currentColor"
                                                 viewBox="0 0 24 24"
@@ -605,52 +683,172 @@ export default function CheckoutPage() {
                                             }`}
                                     >
                                         <div className="overflow-hidden">
-                                            <div className="space-y-3 pb-1">
-                                                {shippingMethods.map((method) => (
+                                            <div className="space-y-4 pb-1">
+                                                {/* Pickup Options */}
+                                                <div>
+                                                    <h3 className="text-sm sm:text-base font-medium text-[#3B2305] mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        <span>Pickup Locations</span>
+                                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                                                            FREE
+                                                        </span>
+                                                    </h3>
+                                                    <div className="space-y-2 sm:space-y-3">
+                                                        {shippingMethods.filter(method => method.type === 'pickup').map((method) => (
+                                                            <label
+                                                                key={method.name}
+                                                                className={`flex flex-col sm:flex-row sm:items-start justify-between p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer
+                                                                    ${selectedShipping?.name === method.name
+                                                                        ? 'border-green-500 bg-green-50 shadow-sm'
+                                                                        : 'border-gray-200 hover:border-gray-300 active:border-green-300'}`}
+                                                            >
+                                                                <div className="flex items-start gap-3 w-full">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="shippingMethod"
+                                                                        checked={selectedShipping?.name === method.name}
+                                                                        onChange={() => handleShippingSelect(method)}
+                                                                        className="w-4 h-4 text-green-600 focus:ring-1 focus:ring-green-500 focus:border-green-500 mt-1 flex-shrink-0"
+                                                                    />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                                                                <div className="font-medium text-sm sm:text-base text-[#3B2305] truncate">
+                                                                                    {method.name.replace('Pickup - ', '')}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="font-medium text-sm text-green-600">FREE</div>
+                                                                        </div>
+                                                                        <div className="text-xs sm:text-sm text-gray-600 mt-1">{method.deliveryTime}</div>
+                                                                        {method.address && (
+                                                                            <div className="text-xs text-gray-600 mt-2 flex items-start gap-1">
+                                                                                <span className="text-green-600 mt-0.5 flex-shrink-0">📍</span>
+                                                                                <span className="break-words">{method.address}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Shipping Zone Finder */}
+                                                <div className="mb-6">
+                                                    <h3 className="text-sm sm:text-base font-medium text-[#3B2305] mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                        </svg>
+                                                        <span>Find Your Delivery Zone</span>
+                                                    </h3>
+                                                    <ShippingZoneFinder 
+                                                        onZoneSelect={(zone) => handleShippingSelect(zone)}
+                                                        className="mb-4"
+                                                    />
+                                                </div>
+
+                                                {/* Shipping Options */}
+                                                <div>
+                                                    <h3 className="text-sm sm:text-base font-medium text-[#3B2305] mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                        </svg>
+                                                        <span>All Delivery Options</span>
+                                                    </h3>
+                                                    <div className="space-y-2 sm:space-y-3">
+                                                        {shippingMethods.filter(method => method.type === 'shipping').map((method) => (
                                                     <label
                                                         key={method.name}
-                                                        className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer
+                                                        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer
                                                             ${selectedShipping?.name === method.name
                                                                 ? 'border-[#C97203] bg-[#F5F5F5] shadow-sm'
-                                                                : 'border-gray-200 hover:border-gray-300'}`}
+                                                                : 'border-gray-200 hover:border-gray-300 active:border-[#C97203]/50'}`}
                                                     >
-                                                        <div className="flex items-center gap-3 sm:gap-4">
+                                                        <div className="flex items-start gap-3 w-full">
                                                             <input
                                                                 type="radio"
                                                                 name="shippingMethod"
                                                                 checked={selectedShipping?.name === method.name}
                                                                 onChange={() => handleShippingSelect(method)}
-                                                                className="w-4 h-4 text-black focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203]"
+                                                                className="w-4 h-4 text-black focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203] mt-1 flex-shrink-0"
                                                             />
-                                                            <div>
-                                                                <div className="font-medium text-sm sm:text-base text-[#3B2305]">{method.name}</div>
-                                                                <div className="text-xs sm:text-sm text-[#3B2305]">{method.deliveryTime}</div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                                                    <div className="font-medium text-sm sm:text-base text-[#3B2305] truncate">
+                                                                        {method.name}
+                                                                    </div>
+                                                                    <div className="font-medium text-sm text-[#3B2305] sm:hidden">
+                                                                        ₦{method.price.toLocaleString()}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-xs sm:text-sm text-gray-600 mt-1">{method.deliveryTime}</div>
+                                                                {method.address && (
+                                                                    <div className="text-xs text-gray-600 mt-1 break-words">
+                                                                        📍 {method.address}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className="font-medium text-sm sm:text-base text-[#3B2305]">₦{method.price.toLocaleString()}</div>
+                                                        <div className="font-medium text-sm sm:text-base text-[#3B2305] hidden sm:block">₦{method.price.toLocaleString()}</div>
                                                     </label>
-                                                ))}
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
                                     {!selectedShipping && !isShippingOpen && (
-                                        <p className="text-sm text-[#3B2305]">Please select a shipping method to continue</p>
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-amber-600">⚠️</span>
+                                                <p className="text-sm text-amber-800 font-medium">
+                                                    Please choose between store pickup (FREE) or home delivery to continue
+                                                </p>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
-                                {/* Shipping Address Card */}
-                                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                                    <h2 className="text-xl font-medium mb-6 text-[#3B2305]">Shipping Address</h2>
-                                    <AddressForm
-                                        title=""
-                                        address={shippingAddress}
-                                        errors={formErrors}
-                                        onChange={handleAddressChange('shipping')}
-                                        onErrorClear={handleErrorClear}
-                                        type="shipping"
-                                    />
-                                </div>
+                                {/* Shipping Address Card - Only show for shipping methods */}
+                                {selectedShipping?.type === 'shipping' && (
+                                    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 lg:p-6 border border-gray-100">
+                                        <h2 className="text-base sm:text-lg lg:text-xl font-medium mb-4 sm:mb-6 text-[#3B2305]">Shipping Address</h2>
+                                        <NigerianAddressForm
+                                            address={shippingAddress}
+                                            onChange={handleAddressChange('shipping')}
+                                            onError={handleErrorClear}
+                                            errors={formErrors}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Pickup Information Card - Only show for pickup methods */}
+                                {selectedShipping?.type === 'pickup' && (
+                                    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 lg:p-6 border border-gray-100">
+                                        <h2 className="text-base sm:text-lg lg:text-xl font-medium mb-4 text-[#3B2305]">Pickup Information</h2>
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-medium text-green-800 mb-1">Pickup Location</h3>
+                                                    <p className="text-sm text-green-700 mb-2">{selectedShipping.address}</p>
+                                                    <p className="text-xs text-green-600">
+                                                        Your order will be ready for pickup within 2-4 hours. We'll send you a confirmation message when it's ready.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Billing Address Card */}
                                 <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -668,13 +866,11 @@ export default function CheckoutPage() {
                                     </div>
 
                                     {!billingSame && (
-                                        <AddressForm
-                                            title=""
+                                        <NigerianAddressForm
                                             address={billingAddress}
-                                            errors={formErrors}
                                             onChange={handleAddressChange('billing')}
-                                            onErrorClear={handleErrorClear}
-                                            type="billing"
+                                            onError={handleErrorClear}
+                                            errors={formErrors}
                                         />
                                     )}
                                 </div>
@@ -849,6 +1045,7 @@ export default function CheckoutPage() {
                                                 <div>
                                                     <span className="block text-sm font-medium">Paystack</span>
                                                     <span className="block text-xs text-gray-500 mt-1">Pay with card, bank transfer, or USSD</span>
+
                                                 </div>
                                             </div>
                                             <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center
@@ -861,6 +1058,26 @@ export default function CheckoutPage() {
                                         </label>
                                     </div>
 
+                                    {paymentMethod === 'paystack' && (
+                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                                                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-blue-800 mb-1">Payment Processing Information</h4>
+                                                    <ul className="text-xs text-blue-700 space-y-1">
+                                                        <li>• Card payments are processed instantly</li>
+                                                        <li>• You can safely close the payment page after initiating payment</li>
+                                                        <li>• We'll send email confirmation once payment is received</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="p-4 bg-gray-50 rounded-lg">
                                         <h3 className="text-sm font-medium mb-2">Payment Summary</h3>
                                         <div className="space-y-2">
@@ -869,8 +1086,15 @@ export default function CheckoutPage() {
                                                 <span>₦{totalPrice.toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Shipping</span>
-                                                <span>{selectedShipping ? `₦${selectedShipping.price.toLocaleString()}` : '--'}</span>
+                                                <span className="text-gray-600">
+                                                    {selectedShipping?.type === 'pickup' ? 'Pickup' : 'Delivery'}
+                                                </span>
+                                                <span className={`${selectedShipping?.price === 0 ? 'text-green-600 font-medium' : ''}`}>
+                                                    {selectedShipping ? 
+                                                        (selectedShipping.price === 0 ? 'FREE' : `₦${selectedShipping.price.toLocaleString()}`) 
+                                                        : '--'
+                                                    }
+                                                </span>
                                             </div>
                                             <div className="flex justify-between text-sm font-medium pt-2 border-t border-gray-200">
                                                 <span>Total</span>

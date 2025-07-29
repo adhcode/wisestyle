@@ -40,8 +40,10 @@ export class PaystackWebhookDto {
         currency: string;
         ip_address: string;
         metadata: {
+            orderId?: string;
             custom_fields: any[];
             referrer: string;
+            [key: string]: any;
         };
         log: {
             start_time: number;

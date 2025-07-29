@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { ProductService } from '@/services/product.service';
 import { Product, Category } from '@/types/product';
-import { CategoryService } from '@/services/category.service';
+import { categoryService } from '@/services/category.service';
 import NumberInput from '@/components/ui/NumberInput';
 
 interface EditFormData {
@@ -16,7 +16,6 @@ interface EditFormData {
     description: string;
     price: number;
     originalPrice?: number;
-    discount?: number;
     categoryId: string;
     images: string[];
     sizes: string[];
@@ -39,7 +38,6 @@ export default function EditProductPage() {
         description: '',
         price: 0,
         originalPrice: undefined,
-        discount: undefined,
         categoryId: '',
         images: [],
         sizes: ['S', 'M', 'L', 'XL'], // Default sizes
@@ -101,7 +99,7 @@ export default function EditProductPage() {
         const fetchData = async () => {
             try {
                 // Fetch categories first
-                const categoriesData = await CategoryService.getCategoryTree();
+                const categoriesData = await categoryService.getAllHierarchical();
                 setCategories(categoriesData);
                 setLoadingCategories(false);
 
@@ -164,8 +162,8 @@ export default function EditProductPage() {
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
-                originalPrice: formData.originalPrice || undefined,
-                discount: formData.discount || undefined,
+                originalPrice: formData.originalPrice || null,
+                discount: formData.discount || null,
                 categoryId: formData.categoryId,
                 image: formData.images[0] || '',
                 images: formData.images,
@@ -300,52 +298,6 @@ export default function EditProductPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Price (₦) *
-                                </label>
-                                <NumberInput
-                                    value={formData.price}
-                                    onChange={(value) => handleInputChange('price', value)}
-                                    placeholder="Enter price"
-                                    min={0}
-                                    step={100}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Original Price (₦)
-                                </label>
-                                <NumberInput
-                                    value={formData.originalPrice || 0}
-                                    onChange={(value) => handleInputChange('originalPrice', value)}
-                                    placeholder="Enter original price"
-                                    min={0}
-                                    step={100}
-                                    className="w-full"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Discount (%)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.discount || ''}
-                                    onChange={(e) => handleInputChange('discount', parseFloat(e.target.value) || undefined)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3B2305] focus:border-transparent"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    placeholder="0-100%"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Category ID
                                 </label>
                                 <input
@@ -358,30 +310,75 @@ export default function EditProductPage() {
                             </div>
                         </div>
 
-                        {/* Sales Price Calculation */}
-                        {(formData.originalPrice || formData.discount) && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <h4 className="text-sm font-medium text-blue-900 mb-2">Sales Price Calculation</h4>
-                                <div className="text-sm text-blue-700">
-                                    {formData.originalPrice && formData.discount ? (
-                                        <div className="space-y-1">
-                                            <p>Original Price: ₦{formData.originalPrice.toLocaleString()}</p>
-                                            <p>Discount: {formData.discount}%</p>
-                                            <p className="font-semibold">
-                                                Sale Price: ₦{(formData.originalPrice * (1 - formData.discount / 100)).toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-blue-600 mt-2">
-                                                💡 The "Price" field above should match the calculated sale price
+                        {/* Pricing Section */}
+                        <div className="space-y-4">
+                            <h4 className="text-md font-medium text-gray-900">Pricing</h4>
+                            
+                            {/* Regular Price */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Price (₦) *
+                                </label>
+                                <NumberInput
+                                    value={formData.price}
+                                    onChange={(value) => handleInputChange('price', value)}
+                                    placeholder="Enter price"
+                                    min={0}
+                                    step={100}
+                                    className="w-full md:w-1/2"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">This is the selling price of the product</p>
+                            </div>
+
+                            {/* Sale Fields - Only show when SALES display section is selected */}
+                            {formData.displaySection === 'SALES' && (
+                                <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                                    <div className="mb-4">
+                                        <h5 className="text-sm font-medium text-orange-900">Sale Pricing</h5>
+                                        <p className="text-xs text-orange-700">This product is marked for sale. Set the original price to show the discount.</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Original Price (₦)
+                                            </label>
+                                            <NumberInput
+                                                value={formData.originalPrice || 0}
+                                                onChange={(value) => handleInputChange('originalPrice', value)}
+                                                placeholder="Enter original price (before discount)"
+                                                min={0}
+                                                step={100}
+                                                className="w-full md:w-1/2"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">This should be higher than the sale price to show the discount</p>
+                                        </div>
+
+                                        {/* Sale Price Preview */}
+                                        {formData.originalPrice && formData.originalPrice > formData.price && (
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-green-700">Discount:</span>
+                                                    <span className="font-semibold text-green-900">
+                                                        {Math.round(((formData.originalPrice - formData.price) / formData.originalPrice) * 100)}% off
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-xs text-green-600 mt-1">
+                                                    <span>Customer saves:</span>
+                                                    <span>₦{(formData.originalPrice - formData.price).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                            <p className="text-xs text-blue-700">
+                                                💡 <strong>How it works:</strong> Customers will see the original price crossed out with the sale price prominently displayed.
                                             </p>
                                         </div>
-                                    ) : formData.originalPrice ? (
-                                        <p>Original Price set. Add a discount percentage to calculate sale price.</p>
-                                    ) : (
-                                        <p>Discount set. Add an original price to calculate sale price.</p>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">

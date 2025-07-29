@@ -15,7 +15,7 @@ import { UploadService } from '@/services/upload.service';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'react-hot-toast';
 import { ProductService } from '@/services/product.service';
-import { CategoryService } from '@/services/category.service';
+import { categoryService } from '@/services/category.service';
 import Image from 'next/image';
 import NumberInput from '@/components/ui/NumberInput';
 
@@ -128,7 +128,7 @@ export default function NewProductPage() {
 
         const fetchCategories = async () => {
             try {
-                const data = await CategoryService.getCategoryTree();
+                const data = await categoryService.getAllHierarchical();
                 setCategories(data);
             } catch (error) {
                 console.error('Error fetching categories:', error);
@@ -459,20 +459,6 @@ export default function NewProductPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Original Price (₦)
-                                </label>
-                                <NumberInput
-                                    value={formData.originalPrice}
-                                    onChange={(value) => setFormData(prev => ({ ...prev, originalPrice: value }))}
-                                    placeholder="Enter original price"
-                                    min={0}
-                                    step={100}
-                                    className="w-full"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Display Section
                                 </label>
                                 <select
@@ -487,6 +473,26 @@ export default function NewProductPage() {
                                     ))}
                                 </select>
                             </div>
+
+                            {/* Show Original Price field only when Sales is selected */}
+                            {formData.displaySection === 'SALES' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Original Price (₦)
+                                    </label>
+                                    <NumberInput
+                                        value={formData.originalPrice}
+                                        onChange={(value) => setFormData(prev => ({ ...prev, originalPrice: value }))}
+                                        placeholder="Enter original price (before discount)"
+                                        min={0}
+                                        step={100}
+                                        className="w-full"
+                                    />
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        This should be higher than the sale price to show the discount
+                                    </p>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -777,7 +783,15 @@ export default function NewProductPage() {
                             <h3 className="font-semibold mb-2">Basic Information</h3>
                             <div className="space-y-2">
                                 <p><span className="font-medium">Name:</span> {formData.name}</p>
-                                <p><span className="font-medium">Price:</span> ${formData.price}</p>
+                                <div>
+                                    <span className="font-medium">Price:</span> ₦{formData.price.toLocaleString()}
+                                    {formData.displaySection === 'SALES' && formData.originalPrice > 0 && (
+                                        <span className="ml-2 text-gray-500 line-through">
+                                            ₦{formData.originalPrice.toLocaleString()}
+                                        </span>
+                                    )}
+                                </div>
+                                <p><span className="font-medium">Display Section:</span> {displaySections.find(s => s.value === formData.displaySection)?.label}</p>
                                 <p><span className="font-medium">Category:</span> {categories.find(c => c.id === formData.categoryId)?.name}</p>
                                 <p><span className="font-medium">Description:</span> {formData.description}</p>
                             </div>

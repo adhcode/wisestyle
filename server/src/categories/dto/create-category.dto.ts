@@ -1,21 +1,37 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
-
-export enum CategoryType {
-  MAIN = 'MAIN',
-  LIFESTYLE = 'LIFESTYLE'
-}
+import { IsString, IsOptional, IsBoolean, IsInt, IsUrl, ValidateIf } from 'class-validator';
 
 export class CreateCategoryDto {
-  @IsString()
-  name: string;
+    @IsString()
+    name: string;
 
-  @IsString()
-  slug: string;
+    @IsString()
+    slug: string;
 
-  @IsString()
-  @IsOptional()
-  description?: string;
+    @IsOptional()
+    @IsString()
+    description?: string;
 
-  @IsEnum(CategoryType)
-  type: CategoryType;
-} 
+    @IsString()
+    type: string;
+
+    @IsOptional()
+    @IsBoolean()
+    isActive?: boolean = true;
+
+    @IsOptional()
+    @ValidateIf((o) => o.imageUrl && o.imageUrl.trim() !== '')
+    @IsUrl()
+    imageUrl?: string;
+
+    @IsOptional()
+    @IsString()
+    image?: string;
+
+    @IsOptional()
+    @IsInt()
+    displayOrder?: number = 0;
+
+    @IsOptional()
+    @IsString()
+    parentId?: string;
+}

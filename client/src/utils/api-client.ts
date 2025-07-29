@@ -59,13 +59,19 @@ class ApiClient {
     };
 
     if (requireAuth) {
-      // Use the Authorization header from axios defaults if it exists
+      // Try multiple sources for the auth token
       const authHeader = axios.defaults.headers.common['Authorization'] as string | undefined;
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
       if (authHeader) {
         headers['Authorization'] = authHeader;
+      } else if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-      // Note: We don't throw an error if no auth header is found
-      // because the backend will handle authentication via cookies
+      // If no token found, rely on cookies (for session-based auth)
+      
+      // Debug logging (only for auth issues)
+      // console.log('Auth headers:', { authHeader, token, finalHeaders: headers });
     }
 
     return headers;
@@ -139,7 +145,7 @@ class ApiClient {
           axios.get(`${API_URL}${url}`, {
             headers: this.getHeaders(requireAuth),
             params,
-            withCredentials: true,
+            withCredentials: true, // Always include credentials for cookie-based auth
           }),
           resource
         );

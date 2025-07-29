@@ -1,52 +1,126 @@
 import { apiClient } from '@/utils/api-client';
-import { Category } from '@/types/product';
 
-export const CategoryService = {
-  async getCategoryTree(): Promise<Category[]> {
-    // Check localStorage cache first
-    try {
-      const cachedData = localStorage.getItem('category_tree');
-      const cacheTimestamp = localStorage.getItem('category_tree_timestamp');
-      const now = Date.now();
-      const oneHour = 60 * 60 * 1000; // 1 hour cache
+export interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    type: string;
+    isActive: boolean;
+    imageUrl?: string;
+    image?: string;
+    displayOrder: number;
+    parentId?: string;
+    parent?: Category;
+    children: Category[];
+    products?: any[];
+    _count: {
+        products: number;
+        children: number;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
 
-      if (cachedData && cacheTimestamp && (now - parseInt(cacheTimestamp)) < oneHour) {
-        return JSON.parse(cachedData) as Category[];
-      }
-    } catch (error) {
-      console.error('Error reading category cache:', error);
+export interface CreateCategoryDto {
+    name: string;
+    slug: string;
+    description?: string;
+    type: string;
+    isActive?: boolean;
+    imageUrl?: string;
+    image?: string;
+    displayOrder?: number;
+    parentId?: string;
+}
+
+export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
+
+export interface CategoryStats {
+    total: number;
+    active: number;
+    inactive: number;
+    root: number;
+    subcategories: number;
+}
+
+class CategoryService {
+    async getAll(includeInactive = false): Promise<Category[]> {
+        return apiClient.get(`/api/categories?includeInactive=${includeInactive}`, false);
     }
 
-    // Fetch from API if cache is empty or expired
-    try {
-      const data = await apiClient.get<Category[]>('/api/categories/tree', false, undefined, 'Category tree');
-      
-      // Cache the result
-      try {
-        localStorage.setItem('category_tree', JSON.stringify(data));
-        localStorage.setItem('category_tree_timestamp', Date.now().toString());
-      } catch (error) {
-        console.error('Error caching categories:', error);
-      }
-      
-      return data;
-    } catch (error) {
-      // If API fails, try to return any cached data even if expired
-      try {
-        const cachedData = localStorage.getItem('category_tree');
-        if (cachedData) {
-          console.warn('Using expired category cache due to API error');
-          return JSON.parse(cachedData) as Category[];
+    async getAllHierarchical(includeInactive = false): Promise<Category[]> {
+        return apiClient.get(`/api/categories/hierarchical?includeInactive=${includeInactive}`, false);
+    }
+
+    async getById(id: string): Promise<Category> {
+        return apiClient.get(`/api/categories/${id}`, false);
+    }
+
+    async getBySlug(slug: string): Promise<Category> {
+        return apiClient.get(`/api/categories/slug/${slug}`, false);
+    }
+
+    async create(data: CreateCategoryDto): Promise<Category> {
+        return apiClient.post('/api/categories', data, true);
+    }
+
+    async update(id: string, data: UpdateCategoryDto): Promise<Category> {
+        return apiClient.patch(`/api/categories/${id}`, data, true);
+    }
+
+    async delete(id: string): Promise<void> {
+        return apiClient.delete(`/api/categories/${id}`, true);
+    }
+
+    async toggleStatus(id: string): Promise<Category> {
+        return apiClient.patch(`/api/categories/${id}/toggle-status`, {}, true);
+    }
+
+    async reorder(categoryOrders: { id: string; displayOrder: number }[]): Promise<{ message: string }> {
+        return apiClient.post('/api/categories/reorder', categoryOrders, true);
+    }
+
+    async getStats(): Promise<CategoryStats> {
+        return apiClient.get('/api/categories/stats', true);
+    }
+
+    // Utility methods
+    generateSlug(name: string): string {
+        return name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+    }
+
+    buildBreadcrumb(category: Category): Category[] {
+        const breadcrumb: Category[] = [];
+        let current: Category | undefined = category;
+
+        while (current) {
+            breadcrumb.unshift(current);
+            current = current.parent;
         }
-      } catch (cacheError) {
-        console.error('Error reading expired cache:', cacheError);
-      }
-      
-      // Re-throw the original error if no cache is available
-      throw error;
+
+        return breadcrumb;
     }
-  },
-  async getCategoryBySlug(slug: string): Promise<Category> {
-    return apiClient.get(`/api/categories/${slug}`, false, undefined, 'Category');
-  },
-}; 
+
+    flattenCategories(categories: Category[]): Category[] {
+        const flattened: Category[] = [];
+
+        const flatten = (cats: Category[], level = 0) => {
+            cats.forEach(cat => {
+                flattened.push({ ...cat, displayOrder: level });
+                if (cat.children && cat.children.length > 0) {
+                    flatten(cat.children, level + 1);
+                }
+            });
+        };
+
+        flatten(categories);
+        return flattened;
+    }
+}
+
+export const categoryService = new CategoryService();
+export { CategoryService };

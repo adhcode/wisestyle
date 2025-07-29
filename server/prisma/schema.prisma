@@ -8,6 +8,242 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                       String         @id @default(uuid())
+  email                    String         @unique
+  password                 String
+  firstName                String?
+  lastName                 String?
+  role                     UserRole       @default(USER)
+  isEmailVerified          Boolean        @default(false)
+  verificationToken        String?
+  verificationTokenExpires DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  notifications            Notification[]
+  orders                   Order[]
+  payments                 Payment[]
+  refreshTokens            RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  description  String?
+  type         String
+  isActive     Boolean    @default(true)
+  imageUrl     String?
+  image        String?
+  displayOrder Int        @default(0)
+  parentId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[] @relation("CategoryHierarchy")
+  products     Product[]  @relation("ProductCategories")
+
+  @@index([parentId])
+  @@index([displayOrder])
+}
+
+model Product {
+  id             String             @id @default(cuid())
+  name           String
+  description    String?
+  price          Float
+  slug           String             @unique
+  categoryId     String
+  isActive       Boolean            @default(true)
+  discount       Float?
+  image          String?
+  isLimited      Boolean            @default(false)
+  originalPrice  Float?
+  stock          Int                @default(0)
+  tags           String[]
+  isNewArrival   Boolean            @default(false)
+  displaySection DisplaySection     @default(NONE)
+  status         ProductStatus      @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  images         Image[]
+  orderItems     OrderItem[]
+  category       Category           @relation("ProductCategories", fields: [categoryId], references: [id])
+  inventory      ProductInventory[]
+  colors         Color[]            @relation("ColorToProduct")
+  sizes          Size[]             @relation("ProductToSize")
+
+  @@index([categoryId])
+}
+
+model Size {
+  id        String             @id @default(cuid())
+  name      String
+  value     String
+  category  String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  inventory ProductInventory[]
+  products  Product[]          @relation("ProductToSize")
+
+  @@unique([value, category])
+}
+
+model Color {
+  id        String             @id @default(cuid())
+  name      String
+  value     String             @unique
+  class     String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  inventory ProductInventory[]
+  products  Product[]          @relation("ColorToProduct")
+}
+
+model ProductInventory {
+  id                String   @id @default(cuid())
+  productId         String
+  sizeId            String
+  colorId           String
+  quantity          Int      @default(0)
+  reservedStock     Int      @default(0)
+  lowStockThreshold Int?
+  status            String   @default("active")
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  color             Color    @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size              Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sizeId, colorId])
+  @@index([productId])
+  @@index([sizeId])
+  @@index([colorId])
+}
+
+model Image {
+  id        String  @id @default(cuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  status          OrderStatus @default(PENDING)
+  total           Float
+  shippingAddress Json
+  billingAddress  Json
+  shippingMethod  String
+  shippingCost    Float
+  email           String
+  phone           String
+  userId          String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  user            User?       @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  payments        Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([email])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  price     Float
+  color     String?
+  size      String?
+  orderId   String
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  amount        Float
+  currency      String
+  status        PaymentStatus
+  provider      String
+  paymentMethod String
+  transactionId String?       @unique
+  metadata      Json?         @default("{}")
+  userId        String?
+  orderId       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  order         Order?        @relation(fields: [orderId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+  refunds       Refund[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([transactionId])
+}
+
+model Refund {
+  id        String       @id @default(uuid())
+  amount    Float
+  reason    String
+  status    RefundStatus @default(PENDING)
+  paymentId String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  payment   Payment      @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@index([status])
+}
+
+model Transaction {
+  id        String            @id @default(uuid())
+  amount    Float
+  currency  String
+  status    TransactionStatus
+  metadata  Json?             @default("{}")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([status])
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  title     String
+  message   String
+  status    NotificationStatus @default(UNREAD)
+  userId    String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -62,240 +298,4 @@ enum TransactionStatus {
   FAILED
   CANCELLED
   PROCESSING
-}
-
-model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  firstName     String?
-  lastName      String?
-  role          UserRole       @default(USER)
-  isEmailVerified Boolean @default(false)
-  verificationToken String?
-  verificationTokenExpires DateTime?
-  refreshTokens RefreshToken[]
-  orders        Order[]
-  payments      Payment[]
-  notifications Notification[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@map("users")
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("refresh_tokens")
-}
-
-model Category {
-  id           String     @id @default(cuid())
-  name         String
-  slug         String     @unique
-  description  String?
-  type         String
-  isActive     Boolean    @default(true)
-  imageUrl     String?
-  image        String?
-  displayOrder Int        @default(0)
-  parentId     String?
-  parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children     Category[] @relation("CategoryHierarchy")
-  products     Product[]  @relation("ProductCategories")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@index([parentId])
-  @@index([displayOrder])
-}
-
-model Product {
-  id             String          @id @default(cuid())
-  name           String
-  description    String?
-  price          Float
-  slug           String          @unique
-  categoryId     String
-  isActive       Boolean         @default(true)
-  discount       Float?
-  image          String?
-  isLimited      Boolean         @default(false)
-  originalPrice  Float?
-  stock          Int             @default(0)
-  tags           String[]
-  isNewArrival   Boolean         @default(false)
-  displaySection DisplaySection  @default(NONE)
-  status         ProductStatus   @default(ACTIVE)
-  category       Category        @relation("ProductCategories", fields: [categoryId], references: [id])
-  images         Image[]
-  orderItems     OrderItem[]
-  sizes          Size[]
-  colors         Color[]
-  inventory      ProductInventory[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  @@index([categoryId])
-}
-
-model Size {
-  id        String            @id @default(cuid())
-  name      String
-  value     String
-  category  String
-  products  Product[]
-  inventory ProductInventory[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-
-  @@unique([value, category])
-}
-
-model Color {
-  id        String            @id @default(cuid())
-  name      String
-  value     String            @unique
-  class     String
-  products  Product[]
-  inventory ProductInventory[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-}
-
-model ProductInventory {
-  id                String   @id @default(cuid())
-  productId         String
-  sizeId            String
-  colorId           String
-  quantity          Int      @default(0)
-  reservedStock     Int      @default(0)
-  lowStockThreshold Int?
-  status            String   @default("active")
-  isActive          Boolean  @default(true)
-  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size              Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
-  color             Color    @relation(fields: [colorId], references: [id], onDelete: Cascade)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@unique([productId, sizeId, colorId])
-  @@index([productId])
-  @@index([sizeId])
-  @@index([colorId])
-}
-
-model Image {
-  id        String   @id @default(cuid())
-  url       String
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-}
-
-model Order {
-  id              String      @id @default(uuid())
-  status          OrderStatus @default(PENDING)
-  total           Float
-  shippingAddress Json
-  billingAddress  Json
-  shippingMethod  String
-  shippingCost    Float
-  email           String
-  phone           String
-  userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
-  items           OrderItem[]
-  payments        Payment[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([email])
-}
-
-model OrderItem {
-  id        String   @id @default(uuid())
-  quantity  Int
-  price     Float
-  color     String?
-  size      String?
-  orderId   String
-  productId String
-  order     Order    @relation(fields: [orderId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([orderId])
-  @@index([productId])
-}
-
-model Payment {
-  id            String        @id @default(uuid())
-  amount        Float
-  currency      String
-  status        PaymentStatus
-  provider      String
-  paymentMethod String
-  transactionId String?       @unique
-  metadata      Json?         @default("{}") @db.JsonB
-  userId        String?
-  orderId       String?
-  user          User?         @relation(fields: [userId], references: [id])
-  order         Order?        @relation(fields: [orderId], references: [id])
-  refunds       Refund[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([userId])
-  @@index([orderId])
-  @@index([transactionId])
-}
-
-model Refund {
-  id            String       @id @default(uuid())
-  amount        Float
-  reason        String
-  status        RefundStatus @default(PENDING)
-  paymentId     String
-  payment       Payment      @relation(fields: [paymentId], references: [id])
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  @@index([paymentId])
-  @@index([status])
-}
-
-model Transaction {
-  id        String            @id @default(uuid())
-  amount    Float
-  currency  String
-  status    TransactionStatus
-  metadata  Json?             @default("{}") @db.JsonB
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-
-  @@index([status])
-}
-
-model Notification {
-  id        String             @id @default(uuid())
-  title     String
-  message   String
-  status    NotificationStatus @default(UNREAD)
-  userId    String
-  user      User               @relation(fields: [userId], references: [id])
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-
-  @@index([userId])
-  @@index([status])
 }

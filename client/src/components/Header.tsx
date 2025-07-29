@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { CategoryService } from '@/services/category.service';
+import { categoryService } from '@/services/category.service';
 import { ShoppingBag, Menu, X, ChevronDown, User } from 'lucide-react';
 
 export default function Header() {
@@ -23,7 +23,7 @@ export default function Header() {
 
     useEffect(() => {
         const fetchCategories = async () => {
-            const data = await CategoryService.getCategoryTree();
+            const data = await categoryService.getAllHierarchical();
             setCategories(data as any[]);
         };
         fetchCategories();

@@ -111,7 +111,7 @@ export default function ProductPage({ params }: ProductPageProps) {
             id: product.id,
             name: product.name,
             slug: product.slug,
-            price: product.salePrice || product.price,
+            price: product.price,
             description: product.description || '',
             categoryId: product.categoryId,
             image: selectedImage || product.image || placeholderImage,
@@ -220,9 +220,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                             sizes="(max-width: 768px) 100vw, 420px"
                             priority
                         />
-                        {product.salePrice && (
+                        {product.discount && product.discount > 0 && (
                             <div className="absolute top-4 left-4 bg-[#C97203] text-white text-xs px-2 py-1 rounded">
-                                {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                                {Math.round(product.discount)}% OFF
                             </div>
                         )}
                     </div>
@@ -249,44 +249,44 @@ export default function ProductPage({ params }: ProductPageProps) {
                 </div>
 
                 {/* Product Info */}
-                <div className="w-full max-w-[400px] mx-auto md:mx-0 flex flex-col gap-6">
-                    <h1 className="text-xl md:text-2xl font-medium text-[#1E1E1E] leading-tight">{product.name}</h1>
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg font-semibold text-[#C97203]">₦{product.salePrice ? product.salePrice.toLocaleString() : product.price.toLocaleString()}</span>
-                        {product.salePrice && (
-                            <span className="text-base text-[#3B2305] line-through opacity-60">₦{product.price.toLocaleString()}</span>
+                <div className="w-full max-w-[400px] mx-auto md:mx-0 flex flex-col gap-4 sm:gap-6">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-medium text-[#1E1E1E] leading-tight">{product.name}</h1>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <span className="text-lg sm:text-xl font-semibold text-[#C97203]">₦{product.price.toLocaleString()}</span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="text-sm sm:text-base text-[#3B2305] line-through opacity-60">₦{product.originalPrice.toLocaleString()}</span>
                         )}
                     </div>
                     {/* Colour Selector */}
                     {product.colors && product.colors.length > 0 && (
                         <div>
-                            <label className="block text-xs font-medium text-[#3B2305] mb-1">COLOUR:</label>
-                            <div className="flex gap-2 items-center">
+                            <label className="block text-xs sm:text-sm font-medium text-[#3B2305] mb-2">COLOUR:</label>
+                            <div className="flex flex-wrap gap-2 items-center">
                                 {product.colors.map((color) => (
                                     <button
                                         key={color.id}
                                         onClick={() => setSelectedColor(color.value)}
                                         aria-label={color.name}
-                                        className={`w-6 h-6 rounded-full border ${selectedColor === color.value ? 'border-[#C97203] scale-110' : 'border-gray-300'} transition-transform`}
+                                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 ${selectedColor === color.value ? 'border-[#C97203] scale-110 shadow-md' : 'border-gray-300'} transition-all hover:scale-105`}
                                         style={{ backgroundColor: color.value }}
                                     />
                                 ))}
-                                <span className="text-xs ml-2">{product.colors.find(c => c.value === selectedColor)?.name}</span>
+                                <span className="text-xs sm:text-sm ml-2 font-medium">{product.colors.find(c => c.value === selectedColor)?.name}</span>
                             </div>
                         </div>
                     )}
                     {/* Size Selector */}
                     {product.sizes && product.sizes.length > 0 && (
                         <div>
-                            <label className="block text-xs font-medium text-[#3B2305] mb-2">SIZE:</label>
-                            <div className="flex flex-wrap gap-2">
+                            <label className="block text-xs sm:text-sm font-medium text-[#3B2305] mb-2">SIZE:</label>
+                            <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
                                 {product.sizes.map(size => (
                                     <button
                                         key={size.id}
                                         onClick={() => setSelectedSize(size.value)}
-                                        className={`px-4 py-2 border text-sm font-medium rounded-md transition-all ${selectedSize === size.value
-                                            ? 'border-[#C97203] bg-[#C97203] text-white'
-                                            : 'border-gray-300 bg-white text-[#3B2305] hover:border-[#C97203] hover:bg-[#FFF7F0]'
+                                        className={`px-3 py-2 sm:px-4 border text-xs sm:text-sm font-medium rounded-md transition-all ${selectedSize === size.value
+                                            ? 'border-[#C97203] bg-[#C97203] text-white shadow-sm'
+                                            : 'border-gray-300 bg-white text-[#3B2305] hover:border-[#C97203] hover:bg-[#FFF7F0] active:bg-[#FFF7F0]'
                                             }`}
                                     >
                                         {size.value}
@@ -294,7 +294,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                                 ))}
                             </div>
                             {selectedSize && (
-                                <p className="mt-1 text-xs text-gray-500">Selected: {selectedSize}</p>
+                                <p className="mt-2 text-xs sm:text-sm text-gray-600 font-medium">Selected: {selectedSize}</p>
                             )}
                         </div>
                     )}

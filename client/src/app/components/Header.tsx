@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { SearchIcon, Heart, ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useLikes } from '@/contexts/LikesContext';
-import { CategoryService } from '@/services/category.service';
+import { categoryService } from '@/services/category.service';
 
 // Define Category type for the tree
 interface CategoryTree {
@@ -51,7 +51,7 @@ export default function Header() {
                 }
 
                 // Fetch from API if cache is empty or expired
-                const data = await CategoryService.getCategoryTree();
+                const data = await categoryService.getAllHierarchical();
                 setCategories(data as CategoryTree[]);
 
                 // Cache for next time

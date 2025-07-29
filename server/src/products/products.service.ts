@@ -144,28 +144,54 @@ export class ProductsService {
     }
   }
 
-  async findAll(page = 1, limit = 10) {
+  async findAll(page = 1, limit = 10, search?: string) {
     try {
       const skip = (page - 1) * limit;
-      return this.prisma.product.findMany({
-        skip,
-        take: limit,
-        include: {
-          category: true,
-          sizes: true,
-          colors: true,
-          images: true,
-          inventory: {
-            include: {
-              size: true,
-              color: true
+      
+      // Build where clause for search
+      const whereClause: Prisma.ProductWhereInput = search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { category: { name: { contains: search, mode: 'insensitive' } } }
+        ]
+      } : {};
+      
+      const [products, total] = await Promise.all([
+        this.prisma.product.findMany({
+          where: whereClause,
+          skip,
+          take: limit,
+          include: {
+            category: true,
+            sizes: true,
+            colors: true,
+            images: true,
+            inventory: {
+              include: {
+                size: true,
+                color: true
+              }
             }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
-        },
-        orderBy: {
-          createdAt: 'desc'
+        }),
+        this.prisma.product.count({ where: whereClause })
+      ]);
+
+      return {
+        products,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
         }
-      });
+      };
     } catch (error) {
       throw new BadRequestException('Error fetching products');
     }

@@ -102,13 +102,9 @@ export default function WishlistPage() {
                                     <Link href={`/product/${product.slug}`} className="block w-full">
                                         <span className="text-[16px] font-[600] text-[#3B2305] line-clamp-2">{product.name}</span>
                                         <div className="flex items-center gap-2 mt-1">
-                                            {product.salePrice ? (
-                                                <>
-                                                    <span className="text-[16px] font-[500] text-[#C97203]">₦{product.salePrice.toLocaleString()}</span>
-                                                    <span className="text-[14px] text-gray-500 line-through">₦{product.price.toLocaleString()}</span>
-                                                </>
-                                            ) : (
-                                                <span className="text-[16px] font-[500] text-[#3B2305]">₦{product.price.toLocaleString()}</span>
+                                            <span className="text-[16px] font-[500] text-[#3B2305]">₦{product.price.toLocaleString()}</span>
+                                            {product.originalPrice && product.originalPrice > product.price && (
+                                                <span className="text-[14px] text-gray-500 line-through">₦{product.originalPrice.toLocaleString()}</span>
                                             )}
                                         </div>
                                     </Link>

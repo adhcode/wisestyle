@@ -43,28 +43,21 @@ export default function SalesPage() {
 
                 // Filter products that have sales/discounts
                 const saleProducts = allProducts.filter((product: any) => {
-                    // Check if product has salePrice, originalPrice, discount, or isOnSale properties
-                    return product.salePrice ||
-                        product.originalPrice ||
+                    // Check if product has originalPrice greater than current price, or other sale indicators
+                    return (product.originalPrice && product.originalPrice > product.price) ||
                         product.discount ||
-                        product.isOnSale ||
-                        (product.price && product.originalPrice && product.price < product.originalPrice);
+                        product.isOnSale;
                 });
 
                 console.log('Filtered sale products:', saleProducts.length);
 
                 // If we don't find any real sale products, create some sample ones from existing products
-                if (saleProducts.length === 0 && allProducts.length > 0) {
-                    console.log('No natural sale products found, creating sample sales...');
-                    const sampleSales = allProducts.slice(0, 8).map((product: any, index: number) => ({
-                        ...product,
-                        originalPrice: product.price,
-                        salePrice: Math.round(product.price * (0.7 + (index % 3) * 0.1)), // 70-90% of original
-                        discount: Math.round((1 - (0.7 + (index % 3) * 0.1)) * 100),
-                        isOnSale: true
-                    }));
-                    setProducts(sampleSales);
+                // Only show products that actually have discounts set in the database
+                if (saleProducts.length === 0) {
+                    console.log('No products with discounts found');
+                    setProducts([]);
                 } else {
+                    console.log(`Found ${saleProducts.length} products with discounts`);
                     setProducts(saleProducts);
                 }
 
@@ -104,9 +97,9 @@ export default function SalesPage() {
     return (
         <main className="min-h-screen bg-[#FEFBF4] pb-16">
             {/* Breadcrumb */}
-            <div className="w-full bg-white py-4 border-b border-[#F4EFE8]">
-                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
-                    <div className="flex items-center text-sm text-[#3B2305]">
+            <div className="w-full bg-white py-3 sm:py-4 border-b border-[#F4EFE8]">
+                <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px]">
+                    <div className="flex items-center text-xs sm:text-sm text-[#3B2305] overflow-x-auto">
                         <Link href="/" className="hover:underline">Home</Link>
                         <ChevronRight className="w-3 h-3 mx-2" />
                         <span>Sales & Discounts</span>
@@ -115,13 +108,13 @@ export default function SalesPage() {
             </div>
 
             {/* Page Header */}
-            <div className="w-full bg-[#F4EFE8] py-10 md:py-14 mb-8 relative overflow-hidden">
-                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-[120px] text-center relative z-10">
-                    <span className="inline-block px-4 py-2 bg-[#D1B99B] text-white rounded-full text-sm font-medium mb-4">
+            <div className="w-full bg-[#F4EFE8] py-6 sm:py-8 md:py-10 lg:py-14 mb-6 sm:mb-8 relative overflow-hidden">
+                <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px] text-center relative z-10">
+                    <span className="inline-block px-3 py-1.5 sm:px-4 sm:py-2 bg-[#D1B99B] text-white rounded-full text-xs sm:text-sm font-medium mb-3 sm:mb-4">
                         Limited Time Offer
                     </span>
-                    <h1 className="text-3xl md:text-4xl font-[500] text-[#3B2305] mb-4">Special Sales & Discounts</h1>
-                    <p className="text-[16px] text-[#3B2305] max-w-2xl mx-auto">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-[500] text-[#3B2305] mb-3 sm:mb-4">Special Sales & Discounts</h1>
+                    <p className="text-sm sm:text-base text-[#3B2305] max-w-2xl mx-auto px-2">
                         Discover amazing deals on our premium quality clothing and accessories.
                         Don't miss these limited-time offers!
                     </p>
@@ -134,21 +127,21 @@ export default function SalesPage() {
             </div>
 
             {/* Products Grid */}
-            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
+            <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px]">
                 {products.length === 0 ? (
-                    <div className="text-center py-16 text-[#3B2305] bg-white rounded-lg shadow-sm p-8">
-                        <h3 className="text-xl font-medium mb-2">No Products On Sale</h3>
-                        <p>We don't have any products on sale at the moment. Check back soon!</p>
+                    <div className="text-center py-12 sm:py-16 text-[#3B2305] bg-white rounded-lg shadow-sm p-4 sm:p-6 md:p-8">
+                        <h3 className="text-lg sm:text-xl font-medium mb-2">No Products On Sale</h3>
+                        <p className="text-sm sm:text-base">We don't have any products on sale at the moment. Check back soon!</p>
                     </div>
                 ) : (
                     <>
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-medium text-[#3B2305]">
+                        <div className="flex justify-between items-center mb-4 sm:mb-6">
+                            <h2 className="text-base sm:text-lg md:text-xl font-medium text-[#3B2305]">
                                 {products.length} {products.length === 1 ? 'Product' : 'Products'} On Sale
                             </h2>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 w-full">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-6 sm:gap-y-8 w-full">
                             {products.map((product) => (
                                 <Link
                                     key={product.id}
@@ -178,14 +171,9 @@ export default function SalesPage() {
                                         {/* Sale Tag */}
                                         <div className="absolute top-3 left-3 px-2.5 py-1.5 bg-[#c23b3b] text-white text-xs rounded-full font-semibold flex items-center">
                                             <Percent className="w-3 h-3 mr-1" />
-                                            {/* Calculate discount percentage properly */}
-                                            {product.salePrice && product.originalPrice
-                                                ? `-${Math.round(((product.originalPrice - product.salePrice) / product.originalPrice) * 100)}%`
-                                                : product.salePrice && product.price > product.salePrice
-                                                    ? `-${Math.round(((product.price - product.salePrice) / product.price) * 100)}%`
-                                                    : product.discount
-                                                        ? `-${product.discount}%`
-                                                        : 'SALE'}
+                                            {product.discount && product.discount > 0
+                                                ? `-${Math.round(product.discount)}%`
+                                                : 'SALE'}
                                         </div>
 
                                         {/* Limited Tag */}
@@ -207,7 +195,7 @@ export default function SalesPage() {
                                                             id: product.id,
                                                             name: product.name,
                                                             slug: product.slug,
-                                                            price: product.salePrice || product.price,
+                                                            price: product.price,
                                                             description: product.description || '',
                                                             categoryId: product.categoryId || '',
                                                             images: product.images || [product.image],
@@ -232,11 +220,11 @@ export default function SalesPage() {
                                             <h3 className="text-[16px] font-[600] text-[#3B2305] line-clamp-1">{product.name}</h3>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[16px] font-[500] text-[#c23b3b]">
-                                                    ₦{(product.salePrice || product.price).toLocaleString()}
+                                                    ₦{product.price.toLocaleString()}
                                                 </span>
-                                                {(product.salePrice || (product.originalPrice && product.originalPrice > product.price)) && (
+                                                {product.originalPrice && product.originalPrice > product.price && (
                                                     <span className="text-[14px] text-gray-500 line-through">
-                                                        ₦{(product.originalPrice || product.price).toLocaleString()}
+                                                        ₦{product.originalPrice.toLocaleString()}
                                                     </span>
                                                 )}
                                             </div>
@@ -248,7 +236,7 @@ export default function SalesPage() {
                                                     id: product.id,
                                                     name: product.name,
                                                     slug: product.slug,
-                                                    price: product.salePrice || product.price,
+                                                    price: product.price,
                                                     description: product.description || '',
                                                     categoryId: product.categoryId || '',
                                                     images: product.images || [product.image],

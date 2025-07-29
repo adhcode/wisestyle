@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, Heart } from 'lucide-react';
-import { CategoryService } from '@/services/category.service';
+import { categoryService } from '@/services/category.service';
 import { RateLimitError } from '@/utils/api-client';
 import { useLikes } from '@/contexts/LikesContext';
 import { useCart } from '@/contexts/CartContext';
@@ -35,7 +35,7 @@ export default function CategoriesPage() {
             setIsLoading(true);
             setError(null);
             setRateLimitError(null);
-            const data = await CategoryService.getCategoryTree();
+            const data = await categoryService.getAllHierarchical();
             setCategories(data as Category[]);
             retryAttemptRef.current = 0;
         } catch (err) {

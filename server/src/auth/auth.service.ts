@@ -19,32 +19,30 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string) {
-    this.logger.debug(`Validating user with email: ${email}`);
+    this.logger.log(`Login attempt for email: ${email}`);
     
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
-    this.logger.debug(`Found user: ${JSON.stringify(user)}`);
-
     if (!user) {
-      this.logger.debug('User not found');
+      this.logger.warn(`Login failed: User not found for email ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (!user.isEmailVerified) {
-      this.logger.debug('Email not verified');
-      throw new UnauthorizedException('Please verify your email before logging in');
+      this.logger.warn(`Login failed: Email not verified for ${email}`);
+      throw new UnauthorizedException('Please verify your email before logging in. Check your inbox for the verification link.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    this.logger.debug(`Password valid: ${isPasswordValid}`);
 
     if (!isPasswordValid) {
-      this.logger.debug('Invalid password');
+      this.logger.warn(`Login failed: Invalid password for ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    this.logger.log(`Login successful for user: ${email}`);
     return user;
   }
 
@@ -116,10 +114,10 @@ export class AuthService {
   }
 
   async verifyEmail(token: string) {
-    this.logger.debug(`Verifying email with token: ${token}`);
+    this.logger.log(`Email verification attempt with token: ${token?.substring(0, 8)}...`);
     
     if (!token) {
-      this.logger.debug('No token provided');
+      this.logger.warn('Email verification failed: No token provided');
       throw new UnauthorizedException('Verification token is required');
     }
 
@@ -130,16 +128,21 @@ export class AuthService {
       },
     });
 
-    this.logger.debug(`Found user for verification: ${JSON.stringify(user)}`);
-
     if (!user) {
-      this.logger.debug('No user found with this verification token');
-      throw new UnauthorizedException('Invalid verification token');
+      this.logger.warn(`Email verification failed: No user found with token ${token?.substring(0, 8)}...`);
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
+
+    this.logger.log(`Found user for verification: ${user.email} (ID: ${user.id})`);
+
+    if (user.isEmailVerified) {
+      this.logger.log(`User ${user.email} is already verified`);
+      return { message: 'Email is already verified. You can log in now.' };
     }
 
     if (!user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
-      this.logger.debug('Verification token has expired');
-      throw new UnauthorizedException('Verification token has expired');
+      this.logger.warn(`Verification token expired for user ${user.email}`);
+      throw new UnauthorizedException('Verification token has expired. Please register again.');
     }
 
     try {
@@ -152,15 +155,28 @@ export class AuthService {
         },
       });
 
-      this.logger.debug(`Updated user after verification: ${JSON.stringify(updatedUser)}`);
+      this.logger.log(`Successfully verified email for user: ${updatedUser.email}`);
 
       // Send welcome email after verification
-      await this.mailService.sendWelcomeEmail(user.email, user.firstName || 'there');
+      try {
+        await this.mailService.sendWelcomeEmail(user.email, user.firstName || 'there');
+        this.logger.log(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        this.logger.error(`Failed to send welcome email to ${user.email}:`, emailError);
+        // Don't fail the verification if email sending fails
+      }
 
-      return { message: 'Email verified successfully. You can now log in.' };
+      return { 
+        message: 'Email verified successfully! Welcome to WiseStyle. You can now log in.',
+        user: {
+          email: updatedUser.email,
+          firstName: updatedUser.firstName,
+          isEmailVerified: updatedUser.isEmailVerified
+        }
+      };
     } catch (error) {
-      this.logger.error('Error updating user during verification:', error);
-      throw new UnauthorizedException('Failed to verify email');
+      this.logger.error(`Error updating user during verification for ${user.email}:`, error);
+      throw new UnauthorizedException('Failed to verify email. Please try again.');
     }
   }
 

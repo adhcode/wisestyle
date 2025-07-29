@@ -12,7 +12,8 @@ import {
     Menu,
     X,
     Package,
-    ChevronRight
+    ChevronRight,
+    FolderTree
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -20,6 +21,7 @@ import { toast } from 'react-hot-toast';
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Products', href: '/admin/products', icon: ShoppingBag },
+    { name: 'Categories', href: '/admin/categories', icon: FolderTree },
     { name: 'Orders', href: '/admin/orders', icon: Package },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Settings', href: '/admin/settings', icon: Settings },

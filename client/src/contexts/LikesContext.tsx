@@ -69,7 +69,7 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const token = localStorage.getItem('token');
                 if (token) {
                     try {
-                        const userLikes = await apiClient.get<{ products: string[] }>('/api/user/likes', true, undefined, 'User likes');
+                        const userLikes = await apiClient.get<{ products: string[] }>('/api/users/likes', true, undefined, 'User likes');
                         if (userLikes?.products) {
                             // Ensure all IDs are strings
                             const stringIds = userLikes.products.map(id => String(id));
@@ -107,14 +107,14 @@ export const LikesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
                 // Only attempt API call if user is logged in
                 if (token) {
-                    await apiClient.delete(`/api/user/likes/${productId}`, true, 'User like');
+                    await apiClient.delete(`/api/users/likes/${productId}`, true, 'User like');
                 }
             } else {
                 dispatch({ type: 'ADD_LIKE', payload: productId });
 
                 // Only attempt API call if user is logged in
                 if (token) {
-                    await apiClient.post('/api/user/likes', { productId }, true, undefined, 'User like');
+                    await apiClient.post('/api/users/likes', { productId }, true, undefined, 'User like');
                 }
             }
         } catch (error) {

@@ -38,7 +38,7 @@ function VerifyEmailContent() {
                 setMessage('Email verified successfully! You can now log in.');
                 toast.success('Email verified successfully!');
                 setTimeout(() => {
-                    router.push('/login');
+                    router.push('/sign-in');
                 }, 3000);
             } catch (error: any) {
                 setStatus('error');
@@ -51,23 +51,86 @@ function VerifyEmailContent() {
     }, [searchParams, router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Email Verification
-                    </h2>
-                    <div className="mt-4">
-                        {status === 'loading' && (
-                            <div className="flex justify-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full">
+                <div className="bg-white rounded-lg shadow-lg p-8">
+                    {/* Logo/Brand */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-bold text-[#3B2305]">WiseStyle</h1>
+                        <p className="text-gray-600 mt-2">Email Verification</p>
+                    </div>
+
+                    {status === 'loading' && (
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3B2305] mx-auto mb-4"></div>
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Verifying Your Email</h2>
+                            <p className="text-gray-600">Please wait while we verify your email address...</p>
+                        </div>
+                    )}
+
+                    {status === 'success' && (
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
                             </div>
-                        )}
-                        {(status === 'success' || status === 'error') && (
-                            <div className={`text-center ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                                {message}
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Email Verified Successfully!</h2>
+                            <p className="text-gray-600 mb-6">{message}</p>
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                                <p className="text-sm text-green-800">
+                                    <strong>Welcome to WiseStyle!</strong><br/>
+                                    Your account is now active. You'll be redirected to the sign-in page in a few seconds.
+                                </p>
                             </div>
-                        )}
+                            <button
+                                onClick={() => router.push('/sign-in')}
+                                className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors font-medium"
+                            >
+                                Continue to Sign In
+                            </button>
+                        </div>
+                    )}
+
+                    {status === 'error' && (
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Verification Failed</h2>
+                            <p className="text-gray-600 mb-6">{message}</p>
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                                <p className="text-sm text-red-800">
+                                    <strong>Common Issues:</strong><br/>
+                                    • The verification link may have expired<br/>
+                                    • The link may have already been used<br/>
+                                    • The link may be invalid or corrupted
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => router.push('/register')}
+                                    className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors font-medium"
+                                >
+                                    Try Registering Again
+                                </button>
+                                <button
+                                    onClick={() => router.push('/sign-in')}
+                                    className="w-full border border-[#3B2305] text-[#3B2305] py-3 px-4 rounded-lg hover:bg-[#F9F5F0] transition-colors font-medium"
+                                >
+                                    Go to Sign In
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                        <p className="text-sm text-gray-500">
+                            Need help? <a href="mailto:hello@wisestyleshop.com" className="text-[#3B2305] hover:underline">Contact Support</a>
+                        </p>
                     </div>
                 </div>
             </div>

@@ -7,9 +7,29 @@ interface HomepageSection {
     products: Product[];
 }
 
+interface PaginatedResponse<T> {
+    products: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+    };
+}
+
 export const ProductService = {
     async getProducts(page = 1, limit = 10): Promise<Product[]> {
-        return apiClient.get('/api/products', false, { page, limit });
+        const response = await apiClient.get('/api/products', false, { page, limit });
+        // Handle both old format (array) and new format (object with products array)
+        return Array.isArray(response) ? response : response.products || [];
+    },
+
+    async getProductsPaginated(page = 1, limit = 10, search?: string): Promise<PaginatedResponse<Product>> {
+        const params: any = { page, limit };
+        if (search) params.search = search;
+        return apiClient.get('/api/products', false, params);
     },
 
     async getProductById(id: string): Promise<Product> {

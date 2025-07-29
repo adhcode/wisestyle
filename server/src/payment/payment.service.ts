@@ -33,6 +33,7 @@ export class PaymentService {
     private readonly logger = new Logger(PaymentService.name);
     private readonly flutterwave: any;
     private readonly paystackSecretKey: string;
+    private readonly paystackWebhookSecret: string;
     private readonly paystackBaseUrl: string;
     private readonly CACHE_TTL = 3600; // 1 hour
 
@@ -55,6 +56,7 @@ export class PaymentService {
             this.flutterwave = new Flutterwave(publicKey, secretKey);
         }
         this.paystackSecretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY') || '';
+        this.paystackWebhookSecret = this.configService.get<string>('PAYSTACK_WEBHOOK_SECRET') || '';
         this.paystackBaseUrl = this.configService.get<string>('PAYSTACK_BASE_URL') || 'https://api.paystack.co';
     }
 
@@ -211,35 +213,50 @@ export class PaymentService {
 
     async initializePaystackPayment(orderId: string, amount: number, email: string) {
         try {
+            if (!this.paystackSecretKey) {
+                throw new BadRequestException('Paystack is not configured on this server');
+            }
+
             const order = await this.ordersService.findOne(orderId);
             if (!order) {
                 throw new NotFoundException(`Order with ID ${orderId} not found`);
             }
 
+            this.logger.log(`Initializing Paystack payment for order ${orderId}, amount: ${amount}`);
+
+            const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+            
+            const paymentData = {
+                amount: amount * 100, // Convert to kobo
+                email,
+                callback_url: `${frontendUrl}/payment/verify`,
+                metadata: {
+                    orderId,
+                    custom_fields: [
+                        {
+                            display_name: 'Order ID',
+                            variable_name: 'order_id',
+                            value: orderId,
+                        },
+                    ],
+                },
+            };
+
+            this.logger.log('Paystack payment data:', JSON.stringify(paymentData, null, 2));
+
             const response = await axios.post(
                 `${this.paystackBaseUrl}/transaction/initialize`,
-                {
-                    amount: amount * 100, // Convert to kobo
-                    email,
-                    callback_url: `${this.configService.get('FRONTEND_URL')}/payment/verify`,
-                    metadata: {
-                        orderId,
-                        custom_fields: [
-                            {
-                                display_name: 'Order ID',
-                                variable_name: 'order_id',
-                                value: orderId,
-                            },
-                        ],
-                    },
-                },
+                paymentData,
                 {
                     headers: {
                         Authorization: `Bearer ${this.paystackSecretKey}`,
                         'Content-Type': 'application/json',
                     },
+                    timeout: 30000, // 30 second timeout
                 }
             );
+
+            this.logger.log(`Paystack response:`, JSON.stringify(response.data, null, 2));
 
             if (response.data.status) {
                 await this.createPaymentRecord({
@@ -259,12 +276,29 @@ export class PaymentService {
                     },
                 });
 
-            return response.data;
+                this.logger.log(`Payment record created for reference: ${response.data.data.reference}`);
+                return response.data;
             }
 
-            throw new BadRequestException('Failed to initialize payment');
+            throw new BadRequestException('Paystack returned unsuccessful status');
         } catch (error) {
-            this.logger.error('Error initializing Paystack payment:', error);
+            this.logger.error('Error initializing Paystack payment:', {
+                orderId,
+                amount,
+                email,
+                error: error.message,
+                stack: error.stack,
+                response: error.response?.data
+            });
+            
+            if (error.response?.status === 401) {
+                throw new BadRequestException('Invalid Paystack API key');
+            } else if (error.response?.status === 400) {
+                throw new BadRequestException(`Paystack API error: ${error.response.data?.message || 'Invalid request'}`);
+            } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+                throw new BadRequestException('Unable to connect to Paystack. Please try again.');
+            }
+            
             throw error;
         }
     }
@@ -274,32 +308,183 @@ export class PaymentService {
             throw new BadRequestException('Flutterwave payments are disabled on this server');
         }
         try {
-            const response = await this.flutterwave.Transaction.verify({ id: transactionId });
+            this.logger.log(`Verifying Flutterwave payment with transaction ID: ${transactionId}`);
             
-            if (response.status === 'success' && response.data.status === 'successful') {
-            const payment = await this.prisma.payment.findFirst({
-                    where: { transactionId: response.data.tx_ref },
-                });
+            // First, try to find existing payment record by transactionId (tx_ref)
+            let payment = await this.prisma.payment.findFirst({
+                where: { transactionId: transactionId },
+            });
 
+            // If payment found, verify with Flutterwave using the tx_ref
+            let response;
+            if (payment) {
+                this.logger.log(`Found payment record, verifying with tx_ref: ${transactionId}`);
+                // For Flutterwave, we need to verify using tx_ref, not transaction ID
+                response = await axios.get(
+                    `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${transactionId}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${this.configService.get('FLUTTERWAVE_SECRET_KEY')}`,
+                        },
+                    }
+                );
+            } else {
+                // If no payment record found, try verifying directly with Flutterwave
+                this.logger.log(`No payment record found, attempting direct verification with: ${transactionId}`);
+                try {
+                    // Try as tx_ref first
+                    response = await axios.get(
+                        `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${transactionId}`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${this.configService.get('FLUTTERWAVE_SECRET_KEY')}`,
+                            },
+                        }
+                    );
+                } catch (txRefError) {
+                    // If tx_ref fails, try as transaction ID
+                    this.logger.log(`tx_ref verification failed, trying as transaction ID: ${transactionId}`);
+                    response = await axios.get(
+                        `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${this.configService.get('FLUTTERWAVE_SECRET_KEY')}`,
+                            },
+                        }
+                    );
+                }
+            }
+            
+            this.logger.log(`Flutterwave verification response:`, JSON.stringify(response.data, null, 2));
+            
+            if (response.data?.status === 'success' && response.data?.data?.status === 'successful') {
+                const verificationData = response.data.data;
+                
+                // If payment record not found, try to create it from the verification data
                 if (!payment) {
-                    throw new NotFoundException('Payment not found');
+                    this.logger.warn(`Payment record not found for tx_ref: ${verificationData.tx_ref}, attempting to create from verification data`);
+                    
+                    // Extract order ID from tx_ref (format: TX-{orderId}-{timestamp})
+                    // Handle both simple orderIds and UUIDs
+                    const txRefParts = verificationData.tx_ref.split('-');
+                    let orderId = null;
+                    
+                    if (txRefParts.length >= 3) {
+                        // For UUID format: TX-uuid-part1-uuid-part2-uuid-part3-timestamp
+                        // Take everything except the first part (TX) and last part (timestamp)
+                        const lastPart = txRefParts[txRefParts.length - 1];
+                        // Check if last part is a timestamp (13 digits)
+                        if (/^\d{13}$/.test(lastPart)) {
+                            orderId = txRefParts.slice(1, -1).join('-');
+                        } else {
+                            // If not a timestamp, include all parts except TX
+                            orderId = txRefParts.slice(1).join('-');
+                        }
+                    } else if (txRefParts.length === 2) {
+                        // Simple format: TX-orderId
+                        orderId = txRefParts[1];
+                    }
+
+                    this.logger.log(`Extracted order ID: ${orderId} from tx_ref: ${verificationData.tx_ref}`);
+
+                    if (orderId) {
+                        try {
+                            payment = await this.createPaymentRecord({
+                                orderId,
+                                amount: verificationData.amount,
+                                currency: verificationData.currency || 'NGN',
+                                provider: 'flutterwave',
+                                paymentMethod: 'card',
+                                transactionId: verificationData.tx_ref,
+                                metadata: {
+                                    orderId,
+                                    email: verificationData.customer?.email,
+                                    transactionId: verificationData.tx_ref,
+                                    paymentData: verificationData,
+                                    phone: verificationData.customer?.phone_number || '',
+                                    name: verificationData.customer?.name || verificationData.customer?.email || '',
+                                },
+                            });
+                            this.logger.log(`Created payment record for tx_ref: ${verificationData.tx_ref}`);
+                        } catch (createError) {
+                            this.logger.error(`Failed to create payment record: ${createError.message}`);
+                            // Continue with the verification even if we can't create the payment record
+                            // This allows the payment to be processed even if there's a database issue
+                        }
+                    } else {
+                        this.logger.error(`Could not extract order ID from tx_ref: ${verificationData.tx_ref}`);
+                        // Don't throw an error here - let the payment verification continue
+                        // The payment might still be valid even if we can't create a record
+                        this.logger.warn('Continuing with payment verification despite missing payment record');
+                    }
                 }
 
                 // Delegate further processing (status update, email, notification) to a central helper
-                await this.handlePaymentSuccess(payment.orderId, 'flutterwave', response.data);
+                if (payment) {
+                    await this.handlePaymentSuccess(payment.orderId, 'flutterwave', verificationData);
+                } else {
+                    // If we don't have a payment record, try to extract order ID and process anyway
+                    const txRefParts = verificationData.tx_ref.split('-');
+                    let orderId = null;
+                    
+                    if (txRefParts.length >= 3) {
+                        const lastPart = txRefParts[txRefParts.length - 1];
+                        if (/^\d{13}$/.test(lastPart)) {
+                            orderId = txRefParts.slice(1, -1).join('-');
+                        } else {
+                            orderId = txRefParts.slice(1).join('-');
+                        }
+                    } else if (txRefParts.length === 2) {
+                        orderId = txRefParts[1];
+                    }
 
-                return response.data;
+                    if (orderId) {
+                        try {
+                            await this.handlePaymentSuccess(orderId, 'flutterwave', verificationData);
+                        } catch (successError) {
+                            this.logger.error(`Failed to handle payment success: ${successError.message}`);
+                            // Don't throw - return the verification data anyway
+                        }
+                    }
+                }
+
+                return verificationData;
             }
 
-            throw new BadRequestException('Payment verification failed');
+            throw new BadRequestException('Payment verification failed - payment not successful');
         } catch (error) {
-            this.logger.error('Error verifying Flutterwave payment:', error);
-            throw error;
+            this.logger.error('Error verifying Flutterwave payment:', {
+                transactionId,
+                error: error.message,
+                stack: error.stack,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+            
+            // Handle specific error cases
+            if (error.response?.status === 404) {
+                this.logger.error(`Transaction not found on Flutterwave: ${transactionId}`);
+                throw new NotFoundException(`Transaction ${transactionId} not found on Flutterwave. Please check the transaction reference.`);
+            } else if (error.response?.status === 401) {
+                this.logger.error('Invalid Flutterwave API key');
+                throw new BadRequestException('Payment service configuration error. Please contact support.');
+            } else if (error.response?.status === 400) {
+                this.logger.error(`Flutterwave API error: ${error.response?.data?.message}`);
+                throw new BadRequestException(`Payment verification error: ${error.response?.data?.message || 'Invalid transaction reference'}`);
+            } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+                this.logger.error('Connection error to Flutterwave API');
+                throw new BadRequestException('Unable to connect to payment service. Please try again later.');
+            }
+            
+            this.logger.error(`Unexpected payment verification error: ${error.message}`);
+            throw new BadRequestException(`Payment verification failed: ${error.message}`);
         }
     }
 
     async verifyPaystackPayment(reference: string) {
         try {
+            this.logger.log(`Verifying Paystack payment with reference: ${reference}`);
+            
             const response = await axios.get(
                 `${this.paystackBaseUrl}/transaction/verify/${reference}`,
                 {
@@ -309,25 +494,100 @@ export class PaymentService {
                 }
             );
 
-            if (response.data.status && response.data.data.status === 'success') {
-            const payment = await this.prisma.payment.findFirst({
+            this.logger.log(`Paystack verification response:`, JSON.stringify(response.data, null, 2));
+
+            if (response.data.status) {
+                const paymentData = response.data.data;
+                
+                // First, try to find the payment record
+                let payment = await this.prisma.payment.findFirst({
                     where: { transactionId: reference },
                 });
 
+                // If payment record not found, try to create it from the verification data
                 if (!payment) {
-                    throw new NotFoundException('Payment not found');
+                    this.logger.warn(`Payment record not found for reference: ${reference}, attempting to create from verification data`);
+                    
+                    // Extract order ID from metadata
+                    let orderId = paymentData.metadata?.orderId;
+                    if (!orderId && paymentData.metadata?.custom_fields) {
+                        const orderField = paymentData.metadata.custom_fields.find(
+                            (field: any) => field.variable_name === 'order_id'
+                        );
+                        orderId = orderField?.value;
+                    }
+
+                    if (orderId) {
+                        // Create the payment record
+                        payment = await this.createPaymentRecord({
+                            orderId,
+                            amount: paymentData.amount / 100, // Convert from kobo
+                            currency: paymentData.currency || 'NGN',
+                            provider: 'paystack',
+                            paymentMethod: 'card',
+                            transactionId: reference,
+                            metadata: {
+                                orderId,
+                                email: paymentData.customer?.email,
+                                transactionId: reference,
+                                paymentData: paymentData,
+                                phone: paymentData.customer?.phone || '',
+                                name: paymentData.customer?.email || '',
+                            },
+                        });
+                        this.logger.log(`Created payment record for reference: ${reference}`);
+                    } else {
+                        this.logger.error(`Could not extract order ID from payment data for reference: ${reference}`);
+                        throw new NotFoundException('Payment reference not found and could not create record');
+                    }
                 }
 
-                // Centralized handling
-                await this.handlePaymentSuccess(payment.orderId, 'paystack', response.data.data);
-
-                return response.data.data;
+                // Handle different payment statuses
+                if (paymentData.status === 'success') {
+                    // Payment successful
+                    await this.handlePaymentSuccess(payment.orderId, 'paystack', paymentData);
+                    return { ...paymentData, status: 'success' };
+                } else if (paymentData.status === 'pending') {
+                    // Payment is still pending (e.g., bank transfer)
+                    this.logger.log(`Payment ${reference} is still pending`);
+                    return { ...paymentData, status: 'pending', message: 'Payment is being processed' };
+                } else if (paymentData.status === 'failed') {
+                    // Payment failed
+                    this.logger.log(`Payment ${reference} failed`);
+                    return { ...paymentData, status: 'failed', message: 'Payment failed' };
+                } else {
+                    // Unknown status
+                    this.logger.log(`Payment ${reference} has unknown status: ${paymentData.status}`);
+                    return { ...paymentData, status: paymentData.status };
+                }
             }
 
-            throw new BadRequestException('Payment verification failed');
+            throw new BadRequestException('Payment verification failed - invalid response from Paystack');
         } catch (error) {
-            this.logger.error('Error verifying Paystack payment:', error);
+            this.logger.error('Error verifying Paystack payment:', {
+                reference,
+                error: error.message,
+                response: error.response?.data
+            });
             throw error;
+        }
+    }
+
+    async verifyPaystackWebhook(webhookData: any, signature: string): Promise<boolean> {
+        try {
+            if (!this.paystackWebhookSecret) {
+                this.logger.warn('Paystack webhook secret not configured');
+                return false;
+            }
+
+            const computedHash = createHmac('sha512', this.paystackWebhookSecret)
+                .update(JSON.stringify(webhookData))
+                .digest('hex');
+
+            return computedHash === signature;
+        } catch (error) {
+            this.logger.error('Error verifying Paystack webhook:', error);
+            return false;
         }
     }
 
@@ -545,5 +805,18 @@ export class PaymentService {
             where: { id: notification.id },
             data: { status: NotificationStatus.READ }
         });
+    }
+
+    // Configuration check methods
+    isPaystackConfigured(): boolean {
+        return !!this.paystackSecretKey;
+    }
+
+    isFlutterwaveConfigured(): boolean {
+        return !!this.flutterwave;
+    }
+
+    getPaystackBaseUrl(): string {
+        return this.paystackBaseUrl;
     }
 } 

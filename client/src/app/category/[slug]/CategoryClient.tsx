@@ -106,8 +106,8 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
 
             {/* Breadcrumb */}
             <div className="w-full bg-white mt-16 border-[#F4EFE8] font-outfit">
-                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
-                    <div className="flex items-center text-sm text-[#3B2305]">
+                <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px]">
+                    <div className="flex items-center text-xs sm:text-sm text-[#3B2305] py-2 overflow-x-auto">
                         <Link href="/" className="hover:underline">Home</Link>
                         <ChevronRight className="w-3 h-3 mx-2" />
                         <Link href="/category" className="hover:underline">Categories</Link>
@@ -118,11 +118,11 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
             </div>
 
             {/* Category Banner */}
-            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
-                <div className="mb-8 text-left">
-                    <h2 className="text-[32px] font-[400] text-[#1E1E1E] mb-2 mt-8">{category.name}</h2>
+            <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px]">
+                <div className="mb-6 sm:mb-8 text-left">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-[32px] font-[400] text-[#1E1E1E] mb-2 mt-4 sm:mt-6 md:mt-8">{category.name}</h2>
                     {category.description && (
-                        <p className="text-lg text-[#3B2305] max-w-3xl opacity-80">
+                        <p className="text-sm sm:text-base md:text-lg text-[#3B2305] max-w-3xl opacity-80">
                             {category.description}
                         </p>
                     )}
@@ -131,17 +131,17 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
 
             {/* Subcategories Section */}
             {category.children && category.children.length > 0 && (
-                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px] mb-8">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px] mb-6 sm:mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                         {category.children.map((child) => (
                             <Link
                                 key={child.id}
                                 href={`/category/${child.slug}`}
-                                className="block p-4 bg-[#F9F5F0] rounded-lg hover:bg-[#F4EFE8] transition-colors"
+                                className="block p-3 sm:p-4 bg-[#F9F5F0] rounded-lg hover:bg-[#F4EFE8] transition-colors active:bg-[#F4EFE8]"
                             >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[#3B2305] font-medium">{child.name}</span>
-                                    <ChevronRight className="w-4 h-4 text-[#3B2305]" />
+                                    <span className="text-[#3B2305] font-medium text-sm sm:text-base truncate pr-2">{child.name}</span>
+                                    <ChevronRight className="w-4 h-4 text-[#3B2305] flex-shrink-0" />
                                 </div>
                             </Link>
                         ))}
@@ -150,28 +150,28 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
             )}
 
             {/* Product Grid Section */}
-            <div className="py-10 md:py-16">
-                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
+            <div className="py-6 sm:py-10 md:py-16">
+                <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-4 md:px-8 lg:px-[120px]">
                     {/* Filters and Sort Options */}
-                    <div className="flex justify-between items-center mb-8">
-                        <p className="text-[#3B2305] text-sm md:text-base">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-8">
+                        <p className="text-[#3B2305] text-xs sm:text-sm md:text-base">
                             Showing {products.length} {products.length === 1 ? 'product' : 'products'}
                         </p>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
                             <button
-                                className="flex items-center gap-2 text-[#3B2305] text-sm md:text-base hover:text-[#5a3c13]"
+                                className="flex items-center gap-2 text-[#3B2305] text-xs sm:text-sm md:text-base hover:text-[#5a3c13] px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 bg-white"
                                 onClick={() => setShowFilters(!showFilters)}
                             >
                                 <SlidersHorizontal className="w-4 h-4" />
-                                <span className="hidden md:inline">Filters</span>
+                                <span className="sm:inline">Filters</span>
                             </button>
 
                             <div className="relative">
-                                <div className="flex items-center gap-2 text-[#3B2305] cursor-pointer">
+                                <div className="flex items-center gap-2 text-[#3B2305] cursor-pointer px-3 py-2 rounded-lg border border-gray-200 bg-white">
                                     <ArrowDownWideNarrow className="w-4 h-4" />
                                     <select
-                                        className="appearance-none bg-transparent border-none text-sm md:text-base focus:outline-none cursor-pointer pr-6"
+                                        className="appearance-none bg-transparent border-none text-xs sm:text-sm md:text-base focus:outline-none cursor-pointer pr-2"
                                         value={sortBy}
                                         onChange={(e) => setSortBy(e.target.value)}
                                     >
@@ -195,7 +195,7 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
                             </Link>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 sm:gap-x-4 md:gap-x-6 gap-y-6 sm:gap-y-8">
                             {sortedProducts().map((product) => (
                                 <div key={product.id} className="group overflow-hidden flex flex-col w-full duration-200">
                                     <Link href={`/product/${product.slug}`} className="block">
@@ -253,9 +253,9 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
                                             <h3 className="text-base font-medium text-[#3B2305]">{product.name}</h3>
                                             <div className="flex justify-between items-center mt-1">
                                                 <span className="text-lg font-semibold text-[#3B2305]">₦{product.price.toLocaleString()}</span>
-                                                {product.originalPrice && (
+                                                {product.discount && product.discount > 0 && (
                                                     <span className="text-xs px-2 py-1 bg-[#FCF0E3] text-[#c23b3b] rounded font-medium">
-                                                        {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                                                        {Math.round(product.discount)}% OFF
                                                     </span>
                                                 )}
                                             </div>

@@ -27,8 +27,12 @@ export class ProductsController {
 
   @Public()
   @Get()
-  findAll(@Query('page') page = '1', @Query('limit') limit = '10') {
-    return this.productsService.findAll(parseInt(page), parseInt(limit));
+  findAll(
+    @Query('page') page = '1', 
+    @Query('limit') limit = '10',
+    @Query('search') search?: string
+  ) {
+    return this.productsService.findAll(parseInt(page), parseInt(limit), search);
   }
 
   @Public()

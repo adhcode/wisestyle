@@ -169,9 +169,9 @@ export default function NewArrivalsPage() {
                                             <h3 className="text-base font-medium text-[#3B2305]">{product.name}</h3>
                                             <div className="flex justify-between items-center mt-1">
                                                 <span className="text-lg font-semibold text-[#3B2305]">₦{product.price.toLocaleString()}</span>
-                                                {product.salePrice && (
+                                                {product.discount && product.discount > 0 && (
                                                     <span className="text-xs px-2 py-1 bg-[#FCF0E3] text-[#c23b3b] rounded font-medium">
-                                                        {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                                                        {Math.round(product.discount)}% OFF
                                                     </span>
                                                 )}
                                             </div>
