@@ -21,7 +21,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "clear:orders": "node scripts/clear-orders.js",
+    "clear:test-orders": "node scripts/clear-test-orders.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { SearchIcon, Heart, ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useLikes } from '@/contexts/LikesContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { categoryService } from '@/services/category.service';
 
 // Define Category type for the tree
@@ -23,6 +24,7 @@ export default function Header() {
     const router = useRouter();
     const { totalItems } = useCart();
     const { state: { likedProducts } } = useLikes();
+    const { user, logout } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [categories, setCategories] = useState<CategoryTree[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -86,16 +88,20 @@ export default function Header() {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setIsSearchOpen(false);
             }
+            // Close dropdowns when clicking outside
+            if (dropdownOpen && !(event.target as Element).closest('.relative')) {
+                setDropdownOpen(null);
+            }
         };
 
-        if (isSearchOpen) {
+        if (isSearchOpen || dropdownOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isSearchOpen]);
+    }, [isSearchOpen, dropdownOpen]);
 
     const toggleMobileMenu = () => {
         setMobileMenuOpen(!mobileMenuOpen);
@@ -181,14 +187,50 @@ export default function Header() {
                             )}
                         </Link>
 
-                        <Link href="/profile" className="text-[#3B2305] hover:text-[#C97203] flex items-center justify-center w-8 h-8">
-                            <Image src="/images/icons/profile-round.png" alt="User" width={20} height={20} />
-                        </Link>
+                        <div className="relative">
+                            <button
+                                onClick={() => handleDropdown('user')}
+                                className="text-[#3B2305] hover:text-[#C97203] flex items-center justify-center w-8 h-8"
+                            >
+                                <Image src="/images/icons/profile-round.png" alt="User" width={20} height={20} />
+                            </button>
+                            
+                            {/* User Dropdown */}
+                            {dropdownOpen === 'user' && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+                                    <Link href="/profile" className="block px-4 py-2 text-[#3B2305] hover:bg-[#F9F5F0] transition-colors">
+                                        My Account
+                                    </Link>
+                                    <Link href="/orders" className="block px-4 py-2 text-[#3B2305] hover:bg-[#F9F5F0] transition-colors">
+                                        My Orders
+                                    </Link>
+                                    <Link href="/wishlist" className="block px-4 py-2 text-[#3B2305] hover:bg-[#F9F5F0] transition-colors">
+                                        Wishlist
+                                    </Link>
+                                    <Link href="/help" className="block px-4 py-2 text-[#3B2305] hover:bg-[#F9F5F0] transition-colors">
+                                        Help & Support
+                                    </Link>
+                                    <hr className="my-2" />
+                                    {user ? (
+                                        <button 
+                                            onClick={logout}
+                                            className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            Sign Out
+                                        </button>
+                                    ) : (
+                                        <Link href="/sign-in" className="block px-4 py-2 text-[#3B2305] hover:bg-[#F9F5F0] transition-colors">
+                                            Sign In
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </nav>
 
                 {/* Desktop Navigation Links - centered */}
-                <ul className="hidden md:flex items-center text-[14px] justify-center gap-2 text-[#3B2305] font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <ul className="hidden md:flex items-center text-[14px] justify-center gap-0 text-[#3B2305] font-normal absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <li className="hidden lg:flex">
                         <Link href="/" className="px-2 py-2 hover:underline underline-offset-4 transition-all duration-150">Home</Link>
                     </li>

@@ -199,7 +199,7 @@ export default function CategoriesPage() {
                                         onClick={() => addToCart(category)}
                                         className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
                                     >
-                                        Add to Cart
+                                        Add to Bag
                                     </button>
                                 </div>
                             </div>

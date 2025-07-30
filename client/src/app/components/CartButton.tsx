@@ -44,7 +44,7 @@ export default function CartButton({ product, className = '', onSuccess }: CartB
             className={`flex items-center justify-center gap-2 ${className}`}
         >
             <ShoppingBag className="w-5 h-5" />
-            Add to Cart
+            Add to Bag
         </button>
     );
 } 

@@ -4,83 +4,34 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, ShoppingBag, Heart, Settings, LogOut, Edit, Save, X } from 'lucide-react';
+import { 
+    User, 
+    ShoppingBag, 
+    MapPin, 
+    CreditCard, 
+    RotateCcw, 
+    HelpCircle,
+    ChevronRight,
+    LogOut
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export default function ProfilePage() {
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-    });
 
-    // Safely handle auth context
-    let user: { firstName?: string; lastName?: string; email?: string; id?: string } | null = null;
-    let logout: (() => Promise<void>) | null = null;
-
-    try {
-        const authContext = useAuth();
-        user = authContext?.user;
-        logout = authContext?.logout;
-    } catch (error) {
-        // Auth context not available during SSR/SSG
-        console.log('Auth context not available during build');
-    }
+    const { user, logout, isLoading } = useAuth();
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
     useEffect(() => {
-        if (mounted && !user) {
+        if (mounted && !isLoading && !user) {
             router.push('/sign-in');
             return;
         }
-
-        if (mounted && user) {
-            setFormData({
-                firstName: user?.firstName || '',
-                lastName: user?.lastName || '',
-                email: user?.email || '',
-            });
-        }
-    }, [user, router, mounted]);
-
-    // Don't render until mounted to prevent hydration issues
-    if (!mounted) {
-        return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3B2305]"></div>
-            </div>
-        );
-    }
-
-    const handleSave = async () => {
-        setLoading(true);
-        try {
-            // Here you would make an API call to update user profile
-            // const response = await fetch('/api/user/profile', {
-            //     method: 'PUT',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify(formData)
-            // });
-
-            toast.success('Profile updated successfully!');
-            setIsEditing(false);
-        } catch (error) {
-            toast.error('Failed to update profile');
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [user, router, mounted, isLoading]);
 
     const handleLogout = async () => {
         try {
@@ -94,7 +45,7 @@ export default function ProfilePage() {
         }
     };
 
-    if (!user) {
+    if (!mounted || isLoading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#3B2305]"></div>
@@ -102,193 +53,136 @@ export default function ProfilePage() {
         );
     }
 
+    if (!user) {
+        return null; // Will redirect in useEffect
+    }
+
+    const getInitials = (firstName?: string, lastName?: string, email?: string) => {
+        if (firstName && lastName) {
+            return `${firstName[0]}${lastName[0]}`.toUpperCase();
+        }
+        if (firstName) {
+            return firstName.slice(0, 2).toUpperCase();
+        }
+        if (email) {
+            return email.slice(0, 2).toUpperCase();
+        }
+        return 'U';
+    };
+
+    const getDisplayName = (firstName?: string, lastName?: string, email?: string) => {
+        if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+        }
+        if (firstName) {
+            return firstName;
+        }
+        return email?.split('@')[0] || 'User';
+    };
+
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-[#F9F5F0] py-12">
-                <div className="max-w-4xl mx-auto px-4">
-                    <div className="flex items-center space-x-4">
-                        <div className="w-20 h-20 bg-[#3B2305] rounded-full flex items-center justify-center">
-                            <User className="w-10 h-10 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-[#3B2305]">My Profile</h1>
-                            <p className="text-[#3B2305] opacity-75">Welcome back, {user?.firstName || user?.email}</p>
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-md mx-auto px-4 py-6">
+                    <div className="text-center">
+                        <h1 className="text-xl font-semibold text-gray-900 mb-8">MY ACCOUNT</h1>
+                        
+                        {/* User Avatar and Info */}
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                                <span className="text-white text-xl font-semibold">
+                                    {getInitials(user?.firstName, user?.lastName, user?.email)}
+                                </span>
+                            </div>
+                            <p className="text-gray-600 text-sm mb-1">Hi,</p>
+                            <h2 className="text-lg font-medium text-gray-900">
+                                {getDisplayName(user?.firstName, user?.lastName, user?.email)}
+                            </h2>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-4 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Sidebar */}
-                    <div className="md:col-span-1">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                            <nav className="space-y-2">
-                                <Link
-                                    href="/profile"
-                                    className="flex items-center space-x-3 px-4 py-3 text-[#3B2305] bg-[#F9F5F0] rounded-lg font-medium"
-                                >
-                                    <User className="w-5 h-5" />
-                                    <span>Profile</span>
-                                </Link>
-                                <Link
-                                    href="/orders"
-                                    className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:text-[#3B2305] hover:bg-[#F9F5F0] rounded-lg transition-colors"
-                                >
-                                    <ShoppingBag className="w-5 h-5" />
-                                    <span>Orders</span>
-                                </Link>
-                                <Link
-                                    href="/wishlist"
-                                    className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:text-[#3B2305] hover:bg-[#F9F5F0] rounded-lg transition-colors"
-                                >
-                                    <Heart className="w-5 h-5" />
-                                    <span>Wishlist</span>
-                                </Link>
-                                <button
-                                    onClick={handleLogout}
-                                    className="flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    <span>Logout</span>
-                                </button>
-                            </nav>
+            {/* Menu Items */}
+            <div className="max-w-md mx-auto bg-white">
+                <div className="divide-y divide-gray-200">
+                    <Link
+                        href="/orders"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <ShoppingBag className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">My orders</span>
                         </div>
-                    </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
 
-                    {/* Main Content */}
-                    <div className="md:col-span-2">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-semibold text-[#3B2305]">Personal Information</h2>
-                                {!isEditing ? (
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className="flex items-center space-x-2 px-4 py-2 border border-[#D1B99B] text-[#3B2305] rounded-lg hover:bg-[#F9F5F0] transition-colors"
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                        <span>Edit</span>
-                                    </button>
-                                ) : (
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={loading}
-                                            className="flex items-center space-x-2 px-4 py-2 bg-[#3B2305] text-white rounded-lg hover:bg-[#4c2d08] transition-colors disabled:opacity-50"
-                                        >
-                                            <Save className="w-4 h-4" />
-                                            <span>{loading ? 'Saving...' : 'Save'}</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setIsEditing(false);
-                                                setFormData({
-                                                    firstName: user?.firstName || '',
-                                                    lastName: user?.lastName || '',
-                                                    email: user?.email || '',
-                                                });
-                                            }}
-                                            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                                        >
-                                            <X className="w-4 h-4" />
-                                            <span>Cancel</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#3B2305] mb-2">
-                                        First Name
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            value={formData.firstName}
-                                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#C97203] focus:border-transparent"
-                                            placeholder="Enter your first name"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 py-3">{user?.firstName || 'Not provided'}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-[#3B2305] mb-2">
-                                        Last Name
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            value={formData.lastName}
-                                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#C97203] focus:border-transparent"
-                                            placeholder="Enter your last name"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 py-3">{user?.lastName || 'Not provided'}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-[#3B2305] mb-2">
-                                        Email Address
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#C97203] focus:border-transparent"
-                                            placeholder="Enter your email"
-                                        />
-                                    ) : (
-                                        <p className="text-gray-900 py-3">{user?.email}</p>
-                                    )}
-                                </div>
-                            </div>
+                    <Link
+                        href="/returns"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <RotateCcw className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">Returns & exchanges</span>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
 
-                        {/* Account Actions */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mt-6">
-                            <h3 className="text-lg font-semibold text-[#3B2305] mb-4">Account Actions</h3>
-                            <div className="space-y-3">
-                                <Link
-                                    href="/change-password"
-                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <Settings className="w-5 h-5 text-gray-600" />
-                                        <span className="text-gray-900">Change Password</span>
-                                    </div>
-                                    <span className="text-gray-400">→</span>
-                                </Link>
-                                <Link
-                                    href="/orders"
-                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <ShoppingBag className="w-5 h-5 text-gray-600" />
-                                        <span className="text-gray-900">View Order History</span>
-                                    </div>
-                                    <span className="text-gray-400">→</span>
-                                </Link>
-                                <Link
-                                    href="/wishlist"
-                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <Heart className="w-5 h-5 text-gray-600" />
-                                        <span className="text-gray-900">Manage Wishlist</span>
-                                    </div>
-                                    <span className="text-gray-400">→</span>
-                                </Link>
-                            </div>
+                    <Link
+                        href="/help"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <HelpCircle className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">Need help?</span>
                         </div>
-                    </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
+
+                    <Link
+                        href="/gift-cards"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <CreditCard className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">Gift cards & vouchers</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
+
+                    <Link
+                        href="/my-details"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <User className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">My details</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
+
+                    <Link
+                        href="/address-book"
+                        className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <MapPin className="w-5 h-5 text-gray-600" />
+                            <span className="text-gray-900 font-medium">Address book</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </Link>
+
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center justify-between w-full px-6 py-4 hover:bg-red-50 transition-colors text-left"
+                    >
+                        <div className="flex items-center space-x-4">
+                            <LogOut className="w-5 h-5 text-red-600" />
+                            <span className="text-red-600 font-medium">Sign out</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-red-400" />
+                    </button>
                 </div>
             </div>
         </div>

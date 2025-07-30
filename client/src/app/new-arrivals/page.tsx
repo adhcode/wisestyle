@@ -177,13 +177,13 @@ export default function NewArrivalsPage() {
                                             </div>
                                         </div>
                                     </Link>
-                                    {/* Mobile Add to Cart Button */}
+                                    {/* Mobile Add to Bag Button */}
                                     <div className="pb-3 block md:hidden">
                                         <button
                                             onClick={() => addToCart(product)}
                                             className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
                                         >
-                                            Add to Cart
+                                            Add to Bag
                                         </button>
                                     </div>
                                 </div>

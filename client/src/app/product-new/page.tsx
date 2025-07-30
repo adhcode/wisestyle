@@ -181,13 +181,13 @@ const ProductPage = () => {
                             </div>
                         </div>
 
-                        {/* Add to Cart Button */}
+                        {/* Add to Bag Button */}
                         <button
                             onClick={handleAddToCart}
                             className="w-full bg-[#3B2305] hover:bg-[#4c2d08] text-white py-3 px-4 rounded-md transition-colors flex items-center justify-center"
                         >
                             <ShoppingBag className="mr-2 h-5 w-5" />
-                            Add to Cart
+                            Add to Bag
                         </button>
 
                         {/* Product Features */}

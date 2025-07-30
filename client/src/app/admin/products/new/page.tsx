@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/hooks/useAdmin';
-import { ProductFormData, Product, InventoryItem, Category } from '@/types/product';
+import { ProductFormData, Product, InventoryItem } from '@/types/product';
 import { useAuthHook } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'react-hot-toast';
 import { ProductService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
+import { Category } from '@/types';
 import Image from 'next/image';
 import NumberInput from '@/components/ui/NumberInput';
 
@@ -785,7 +786,7 @@ export default function NewProductPage() {
                                 <p><span className="font-medium">Name:</span> {formData.name}</p>
                                 <div>
                                     <span className="font-medium">Price:</span> ₦{formData.price.toLocaleString()}
-                                    {formData.displaySection === 'SALES' && formData.originalPrice > 0 && (
+                                    {formData.displaySection === 'SALES' && formData.originalPrice && formData.originalPrice > 0 && (
                                         <span className="ml-2 text-gray-500 line-through">
                                             ₦{formData.originalPrice.toLocaleString()}
                                         </span>

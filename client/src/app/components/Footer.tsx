@@ -14,43 +14,44 @@ export default function Footer() {
                     {/* Navigation Links */}
                     <div className="flex flex-1 flex-col sm:flex-row gap-8 justify-between">
                         <div>
-                            <h4 className="text-[20px] font-[500] mb-4 text-[#3B2305]">Policy</h4>
+                            <h4 className="text-[18px] font-[500] mb-4 text-[#3B2305]">Policy</h4>
                             <ul className="space-y-3">
-                                <li><Link href="/returns-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Returns & Refunds</Link></li>
-                                <li><Link href="/shipping-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Shipping & Delivery</Link></li>
-                                <li><Link href="/privacy-policy" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Privacy Policy</Link></li>
-                                <li><Link href="/terms-conditions" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Terms & Conditions</Link></li>
+                                <li><Link href="/returns-policy" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Returns & Refunds</Link></li>
+                                <li><Link href="/shipping-policy" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Shipping & Delivery</Link></li>
+                                <li><Link href="/privacy-policy" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Privacy Policy</Link></li>
+                                <li><Link href="/terms-conditions" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Terms & Conditions</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="text-[20px] font-[500] mb-4 text-[#3B2305]">Customer Service</h4>
+                            <h4 className="text-[18px] font-[500] mb-4 text-[#3B2305]">Customer Service</h4>
                             <ul className="space-y-3">
-                                <li><Link href="/contact" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Contact</Link></li>
-                                <li><Link href="/faqs" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Faqs</Link></li>
+                                <li><Link href="/contact" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Contact</Link></li>
+                                <li><Link href="/faqs" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Faqs</Link></li>
 
                             </ul>
                         </div>
                         <div>
-                            <h4 className="text-[20px] font-[500] mb-4 text-[#3B2305]">About</h4>
+                            <h4 className="text-[18px] font-[500] mb-4 text-[#3B2305]">About</h4>
                             <ul className="space-y-3">
-                                <li><Link href="/about" className="hover:text-[#C97203] text-[18px] font-[400] text-[#3B2305]">Our Story</Link></li>
+                                <li><Link href="/about" className="hover:text-[#C97203] text-[14px] font-[400] text-[#3B2305]">Our Story</Link></li>
                             </ul>
                         </div>
 
                         <div className="flex items-center gap-6">
                             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                                <Image src="/images/icons/instagram.png" alt="Facebook" width={24} height={24} />
+                                <Image src="/images/icons/instagram.png" alt="Facebook" width={18} height={18} />
                             </a>
                             <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                                <Image src="/images/icons/facebook.png" alt="Instagram" width={24} height={24} />
+                                <Image src="/images/icons/facebook.png" alt="Instagram" width={18} height={18} />
                             </a>
                             <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                                <Image src="/images/icons/tiktok.png" alt="TikTok" width={24} height={24} />
+                                <Image src="/images/icons/tiktok.png" alt="TikTok" width={18} height={18} />
                             </a>
                         </div>
                     </div>
                 </div>
 
+                
 
 
             </div>

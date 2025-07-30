@@ -34,28 +34,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const checkAuth = async () => {
         try {
-            // Skip auth check for public routes
-            const publicRoutes = ['/product', '/products', '/', '/sign-in', '/register', '/verify-email'];
-            const isPublicRoute = publicRoutes.some(route => window.location.pathname.startsWith(route));
-
-            if (isPublicRoute) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setUser(null);
                 setIsLoading(false);
                 return;
             }
 
-            const response = await fetch('/api/auth/me', {
-                credentials: 'include',
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+
+            const response = await fetch(`${apiUrl}/api/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
             });
 
             if (response.ok) {
                 const userData = await response.json();
                 setUser(userData);
-            } else if (response.status === 404) {
-                // Handle 404 gracefully for public routes
+            } else {
+                // Token is invalid, remove it
+                localStorage.removeItem('token');
                 setUser(null);
             }
         } catch (error) {
             console.error('Auth check failed:', error);
+            localStorage.removeItem('token');
             setUser(null);
         } finally {
             setIsLoading(false);
@@ -64,13 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch('/api/auth/login', {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+
+            const response = await fetch(`${apiUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password }),
-                credentials: 'include',
             });
 
             if (!response.ok) {
@@ -78,10 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error(error.message);
             }
 
-            const userData = await response.json();
-            setUser(userData);
+            const data = await response.json();
+            
+            // Store token and user data
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+            }
+            
+            setUser(data.user || data);
             toast.success('Login successful');
-            router.push('/');
+            router.push('/profile');
         } catch (error) {
             console.error('Login failed:', error);
             toast.error(error instanceof Error ? error.message : 'Login failed');
@@ -91,28 +105,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         try {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'include',
-            });
+            const token = localStorage.getItem('token');
+            if (token) {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                    (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+
+                await fetch(`${apiUrl}/api/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+            }
+            
+            localStorage.removeItem('token');
             setUser(null);
             toast.success('Logged out successfully');
-            router.push('/sign-in');
+            router.push('/');
         } catch (error) {
             console.error('Logout failed:', error);
+            localStorage.removeItem('token');
+            setUser(null);
             toast.error('Logout failed');
+            router.push('/');
         }
     };
 
     const register = async (email: string, password: string, firstName: string, lastName: string) => {
         try {
-            const response = await fetch('/api/auth/register', {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+
+            const response = await fetch(`${apiUrl}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password, firstName, lastName }),
-                credentials: 'include',
             });
 
             if (!response.ok) {
@@ -122,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const data = await response.json();
             toast.success(data.message || 'Registration successful. Please check your email to verify your account.');
-            router.push('/register/success');
+            router.push('/sign-in?message=Please check your email to verify your account');
         } catch (error) {
             console.error('Registration failed:', error);
             toast.error(error instanceof Error ? error.message : 'Registration failed');
@@ -132,13 +162,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const verifyEmail = async (token: string) => {
         try {
-            const response = await fetch('/api/auth/verify-email', {
-                method: 'POST',
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+
+            const response = await fetch(`${apiUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ token }),
-                credentials: 'include',
             });
 
             if (!response.ok) {
@@ -148,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const data = await response.json();
             toast.success(data.message || 'Email verified successfully');
-            router.push('/sign-in');
+            router.push('/sign-in?verified=true');
         } catch (error) {
             console.error('Email verification failed:', error);
             toast.error(error instanceof Error ? error.message : 'Email verification failed');

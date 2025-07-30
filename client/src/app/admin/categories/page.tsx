@@ -76,7 +76,7 @@ export default function AdminCategoriesPage() {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const data = await apiClient.get('/api/categories?includeInactive=true', false); // false = no auth required for GET
+            const data = await apiClient.get<Category[]>('/api/categories?includeInactive=true', false); // false = no auth required for GET
             console.log('Categories fetched:', data);
             setCategories(data);
         } catch (error) {

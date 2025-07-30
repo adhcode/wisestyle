@@ -26,12 +26,18 @@ export interface Category {
     slug: string;
     description?: string;
     type: string;
-    image: string | null;
-    imageUrl: string | null;
-    displayOrder: number;
     isActive: boolean;
-    parentId: string | null;
-    children?: Category[];
+    imageUrl?: string;
+    image?: string;
+    displayOrder: number;
+    parentId?: string;
+    parent?: Category;
+    children: Category[];
+    products?: any[];
+    _count: {
+        products: number;
+        children: number;
+    };
     createdAt: string;
     updatedAt: string;
 }

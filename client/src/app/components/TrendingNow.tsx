@@ -81,7 +81,7 @@ export default function TrendingNow() {
     return (
         <section className="py-16 bg-[#FEFBF4]">
             <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
-                <h2 className="text-[32px] font-[400] text-[#1E1E1E] mb-8">Trending Now</h2>
+                <h2 className="text-[32px] font-[400] text-[#3B2305] mb-8 font-macaw">Trending Now</h2>
 
                 {/* Rate limit error message */}
                 {rateLimitError && (

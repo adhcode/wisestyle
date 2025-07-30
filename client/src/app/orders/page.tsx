@@ -53,38 +53,51 @@ interface Order {
 }
 
 export default function OrdersPage() {
-    const { user } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
     useEffect(() => {
-        if (!user) {
+        if (!authLoading && !user) {
             router.push('/sign-in');
             return;
         }
 
-        fetchOrders();
-    }, [user, router]);
+        if (user) {
+            fetchOrders();
+        }
+    }, [user, router, authLoading]);
 
     const fetchOrders = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/my-orders`, {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+            
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${apiUrl}/api/orders/my-orders`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    toast.error('Please log in to view your orders');
+                    router.push('/sign-in');
+                    return;
+                }
                 throw new Error('Failed to fetch orders');
             }
 
             const data = await response.json();
-            setOrders(data);
+            setOrders(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching orders:', error);
             toast.error('Failed to load orders');
+            setOrders([]);
         } finally {
             setLoading(false);
         }
@@ -139,7 +152,7 @@ export default function OrdersPage() {
         return item.product.image || '/images/placeholder.png';
     };
 
-    if (loading) {
+    if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
@@ -148,6 +161,10 @@ export default function OrdersPage() {
                 </div>
             </div>
         );
+    }
+
+    if (!user) {
+        return null; // Will redirect in useEffect
     }
 
     if (selectedOrder) {

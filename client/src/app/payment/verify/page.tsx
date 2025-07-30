@@ -1,20 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'react-hot-toast';
 
-export default function PaymentVerifyPage() {
+function PaymentVerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { clearCart } = useCart();
     const [status, setStatus] = useState<'verifying' | 'success' | 'failed' | 'pending'>('verifying');
     const [message, setMessage] = useState('Verifying your payment...');
+    const hasVerified = useRef(false);
+    const toastShown = useRef(false);
 
     useEffect(() => {
+        // Prevent multiple verification attempts
+        if (hasVerified.current) return;
         const verifyPayment = async () => {
             try {
+                hasVerified.current = true;
+                
                 const reference = searchParams.get('reference');
                 const trxref = searchParams.get('trxref');
                 const tx_ref = searchParams.get('tx_ref');
@@ -60,7 +66,12 @@ export default function PaymentVerifyPage() {
                         setStatus('success');
                         setMessage('Payment successful! Redirecting...');
                         clearCart();
-                        toast.success('Payment completed successfully!');
+                        
+                        // Only show toast once
+                        if (!toastShown.current) {
+                            toast.success('Payment completed successfully!');
+                            toastShown.current = true;
+                        }
                         
                         // Redirect to success page after a short delay
                         setTimeout(() => {
@@ -69,6 +80,8 @@ export default function PaymentVerifyPage() {
                     } else if (data.status === 'pending') {
                         setStatus('pending');
                         setMessage('Payment is being processed. We will notify you once confirmed.');
+                        // Reset verification flag for pending status to allow re-checking
+                        hasVerified.current = false;
                         // Keep checking for payment status more frequently
                         setTimeout(() => {
                             window.location.reload();
@@ -76,17 +89,32 @@ export default function PaymentVerifyPage() {
                     } else if (data.status === 'failed') {
                         setStatus('failed');
                         setMessage(data.message || 'Payment failed');
-                        toast.error('Payment failed');
+                        
+                        // Only show toast once
+                        if (!toastShown.current) {
+                            toast.error('Payment failed');
+                            toastShown.current = true;
+                        }
                     } else {
                         setStatus('failed');
                         setMessage(data.message || 'Payment verification failed');
-                        toast.error('Payment verification failed');
+                        
+                        // Only show toast once
+                        if (!toastShown.current) {
+                            toast.error('Payment verification failed');
+                            toastShown.current = true;
+                        }
                     }
                 } else {
                     console.error('Payment verification failed:', data);
                     setStatus('failed');
                     setMessage(data.message || `Payment verification failed. Status: ${data.status || 'unknown'}`);
-                    toast.error('Payment verification failed');
+                    
+                    // Only show toast once
+                    if (!toastShown.current) {
+                        toast.error('Payment verification failed');
+                        toastShown.current = true;
+                    }
                 }
             } catch (error) {
                 console.error('Payment verification error:', error);
@@ -98,21 +126,25 @@ export default function PaymentVerifyPage() {
                     setMessage('An error occurred while verifying payment');
                 }
                 
-                toast.error('Payment verification failed');
+                // Only show toast once
+                if (!toastShown.current) {
+                    toast.error('Payment verification failed');
+                    toastShown.current = true;
+                }
             }
         };
 
         verifyPayment();
-    }, [searchParams, clearCart, router]);
+    }, []); // Empty dependency array to run only once
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+            <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center mx-auto">
                 {status === 'verifying' && (
                     <>
                         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#3B2305] mx-auto mb-4"></div>
-                        <h2 className="text-xl font-semibold text-[#3B2305] mb-2">Verifying Payment</h2>
-                        <p className="text-gray-600">{message}</p>
+                        <h2 className="text-lg sm:text-xl font-semibold text-[#3B2305] mb-2">Verifying Payment</h2>
+                        <p className="text-sm sm:text-base text-gray-600">{message}</p>
                     </>
                 )}
 
@@ -123,8 +155,8 @@ export default function PaymentVerifyPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <h2 className="text-xl font-semibold text-green-600 mb-2">Payment Successful!</h2>
-                        <p className="text-gray-600">{message}</p>
+                        <h2 className="text-lg sm:text-xl font-semibold text-green-600 mb-2">Payment Successful!</h2>
+                        <p className="text-sm sm:text-base text-gray-600">{message}</p>
                     </>
                 )}
 
@@ -135,10 +167,10 @@ export default function PaymentVerifyPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <h2 className="text-xl font-semibold text-yellow-600 mb-2">Payment Processing</h2>
-                        <p className="text-gray-600 mb-4">{message}</p>
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                            <p className="text-sm text-yellow-800">
+                        <h2 className="text-lg sm:text-xl font-semibold text-yellow-600 mb-2">Payment Processing</h2>
+                        <p className="text-sm sm:text-base text-gray-600 mb-4">{message}</p>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-6">
+                            <p className="text-xs sm:text-sm text-yellow-800">
                                 <strong>Bank Transfer in Progress:</strong><br/>
                                 Your payment is being processed. This usually takes a few minutes for bank transfers. 
                                 You can safely close this page - we'll send you an email confirmation once the payment is confirmed.
@@ -147,13 +179,13 @@ export default function PaymentVerifyPage() {
                         <div className="space-y-3">
                             <button
                                 onClick={() => router.push('/')}
-                                className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors"
+                                className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors text-sm sm:text-base font-medium"
                             >
                                 Continue Shopping
                             </button>
                             <button
                                 onClick={() => window.location.reload()}
-                                className="w-full border border-[#3B2305] text-[#3B2305] py-3 px-4 rounded-lg hover:bg-[#F9F5F0] transition-colors"
+                                className="w-full border border-[#3B2305] text-[#3B2305] py-3 px-4 rounded-lg hover:bg-[#F9F5F0] transition-colors text-sm sm:text-base font-medium"
                             >
                                 Check Status Again
                             </button>
@@ -168,18 +200,18 @@ export default function PaymentVerifyPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </div>
-                        <h2 className="text-xl font-semibold text-red-600 mb-2">Payment Issue</h2>
-                        <p className="text-gray-600 mb-6">{message}</p>
+                        <h2 className="text-lg sm:text-xl font-semibold text-red-600 mb-2">Payment Issue</h2>
+                        <p className="text-sm sm:text-base text-gray-600 mb-6">{message}</p>
                         <div className="space-y-3">
                             <button
                                 onClick={() => router.push('/checkout')}
-                                className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors"
+                                className="w-full bg-[#3B2305] text-white py-3 px-4 rounded-lg hover:bg-[#4c2d08] transition-colors text-sm sm:text-base font-medium"
                             >
                                 Go to Checkout
                             </button>
                             <button
                                 onClick={() => router.push('/')}
-                                className="w-full border border-[#3B2305] text-[#3B2305] py-3 px-4 rounded-lg hover:bg-[#F9F5F0] transition-colors"
+                                className="w-full border border-[#3B2305] text-[#3B2305] py-3 px-4 rounded-lg hover:bg-[#F9F5F0] transition-colors text-sm sm:text-base font-medium"
                             >
                                 Continue Shopping
                             </button>
@@ -190,3 +222,20 @@ export default function PaymentVerifyPage() {
         </div>
     );
 }
+
+function PaymentVerifyPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3B2305] mx-auto mb-4"></div>
+                    <p className="text-sm sm:text-base text-gray-600">Loading payment verification...</p>
+                </div>
+            </div>
+        }>
+            <PaymentVerifyContent />
+        </Suspense>
+    );
+}
+
+export default PaymentVerifyPage;

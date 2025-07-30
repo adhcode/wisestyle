@@ -12,7 +12,7 @@ export const UploadService = {
         } catch (error) {
             console.error('Upload failed:', error);
             // Provide more helpful error message
-            if (error.message?.includes('Network Error') || error.message?.includes('ERR_FAILED')) {
+            if (error instanceof Error && (error.message?.includes('Network Error') || error.message?.includes('ERR_FAILED'))) {
                 throw new Error('Cannot connect to server. Please make sure the backend server is running on port 3001.');
             }
             throw error;
@@ -32,7 +32,7 @@ export const UploadService = {
         } catch (error) {
             console.error('Upload failed:', error);
             // Provide more helpful error message
-            if (error.message?.includes('Network Error') || error.message?.includes('ERR_FAILED')) {
+            if (error instanceof Error && (error.message?.includes('Network Error') || error.message?.includes('ERR_FAILED'))) {
                 throw new Error('Cannot connect to server. Please make sure the backend server is running on port 3001.');
             }
             throw error;

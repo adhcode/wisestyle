@@ -7,8 +7,9 @@ import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { ProductService } from '@/services/product.service';
-import { Product, Category } from '@/types/product';
+import { Product } from '@/types/product';
 import { categoryService } from '@/services/category.service';
+import { Category } from '@/types';
 import NumberInput from '@/components/ui/NumberInput';
 
 interface EditFormData {
@@ -124,7 +125,6 @@ export default function EditProductPage() {
                     description: productData.description || '',
                     price: productData.price,
                     originalPrice: productData.originalPrice || undefined,
-                    discount: productData.discount || undefined,
                     categoryId: productData.categoryId,
                     images: Array.isArray(productData.images)
                         ? productData.images.map((img: any) => typeof img === 'string' ? img : img?.url || '')
@@ -162,8 +162,7 @@ export default function EditProductPage() {
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
-                originalPrice: formData.originalPrice || null,
-                discount: formData.discount || null,
+                originalPrice: formData.originalPrice || undefined,
                 categoryId: formData.categoryId,
                 image: formData.images[0] || '',
                 images: formData.images,
@@ -313,7 +312,7 @@ export default function EditProductPage() {
                         {/* Pricing Section */}
                         <div className="space-y-4">
                             <h4 className="text-md font-medium text-gray-900">Pricing</h4>
-                            
+
                             {/* Regular Price */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">

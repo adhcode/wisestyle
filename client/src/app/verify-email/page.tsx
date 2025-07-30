@@ -21,7 +21,10 @@ function VerifyEmailContent() {
             }
 
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+                    (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+                
+                const response = await fetch(`${apiUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -30,25 +33,39 @@ function VerifyEmailContent() {
 
                 const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.message || 'Verification failed');
+                if (response.ok) {
+                    setStatus('success');
+                    setMessage('Email verified successfully! You can now log in.');
+                    toast.success('Email verified successfully!');
+                    setTimeout(() => {
+                        router.push('/sign-in?verified=true');
+                    }, 3000);
+                } else {
+                    // Handle specific error cases
+                    if (response.status === 400 && data.message?.includes('already verified')) {
+                        setStatus('success');
+                        setMessage('Your email is already verified! You can log in now.');
+                        toast.success('Email already verified!');
+                        setTimeout(() => {
+                            router.push('/sign-in?verified=true');
+                        }, 3000);
+                    } else if (response.status === 400 && data.message?.includes('expired')) {
+                        setStatus('error');
+                        setMessage('Verification link has expired. Please request a new verification email.');
+                    } else {
+                        setStatus('error');
+                        setMessage(data.message || 'Verification failed');
+                    }
                 }
-
-                setStatus('success');
-                setMessage('Email verified successfully! You can now log in.');
-                toast.success('Email verified successfully!');
-                setTimeout(() => {
-                    router.push('/sign-in');
-                }, 3000);
             } catch (error: any) {
+                console.error('Verification error:', error);
                 setStatus('error');
-                setMessage(error.message || 'Failed to verify email');
-                toast.error(error.message || 'Failed to verify email');
+                setMessage('Network error occurred. Please check your connection and try again.');
             }
         };
 
         verifyEmail();
-    }, [searchParams, router]);
+    }, []); // Remove dependencies to prevent multiple calls
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">

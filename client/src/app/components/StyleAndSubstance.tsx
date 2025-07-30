@@ -146,55 +146,83 @@ export default function StyleAndSubstance() {
                 </div>
             </div>
 
-            {/* Mobile View - Now matching TrendingNow structure */}
+            {/* Mobile View - Fixed alignment with CSS Grid */}
             <div className="block md:hidden max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-[120px]">
                 <div>
-                    <h2 className="text-[32px] font-[400] text-[#1E1E1E] mb-8">Style & Substance</h2>
+                    <h2 className="text-[32px] font-[400] text-[#3B2305] mb-8 font-macaw">Style & Substance</h2>
+                        <p className="text-[20px] font-[400] text-[#3B2305] mb-6 w-[301px]">
+                            Explore our latest arrival fashion clothing for men.
+                        </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-[16px] w-full">
                     {products.map((product) => (
-                        <Link
-                            key={product.id}
-                            href={`/product/${product.slug}`}
-                            className="group overflow-hidden flex flex-col w-full duration-200"
-                        >
-                            <div className="relative w-full aspect-[1/1] bg-[#F9F5F0] rounded-lg overflow-hidden">
-                                <Image
-                                    src={product.image || '/images/placeholder.jpg'}
-                                    alt={product.name}
-                                    fill
-                                    className="object-cover object-center"
-                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                                />
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        handleToggleLike(product.id);
-                                    }}
-                                    className="absolute top-2 right-2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
-                                >
-                                    <Heart
-                                        className={`w-4 h-4 md:w-5 md:h-5 ${likedProducts.includes(product.id)
-                                            ? 'fill-red-500 stroke-red-500'
-                                            : 'stroke-gray-600'
-                                            }`}
+                        <div key={product.id} className="group overflow-hidden w-full duration-200">
+                            {/* Mobile Layout - Using CSS Grid for perfect alignment */}
+                            <div className="grid grid-rows-[auto_auto_auto_auto] h-full">
+                                {/* Row 1: Product Image */}
+                                <Link href={`/product/${product.slug}`} className="block">
+                                    <div className="relative w-full aspect-[1/1] bg-[#F9F5F0] rounded-lg overflow-hidden">
+                                        <Image
+                                            src={product.image || '/images/placeholder.jpg'}
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover object-center"
+                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                                        />
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleToggleLike(product.id);
+                                            }}
+                                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-sm z-10"
+                                        >
+                                            <Heart
+                                                className={`w-4 h-4 ${likedProducts.includes(product.id)
+                                                    ? 'fill-red-500 stroke-red-500'
+                                                    : 'stroke-gray-600'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </Link>
+                                
+                                {/* Row 2: Product Name - Fixed height */}
+                                <Link href={`/product/${product.slug}`} className="block pt-3">
+                                    <h3 className="text-[16px] font-[600] text-[#3B2305] h-12 overflow-hidden leading-6" 
+                                        style={{
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical'
+                                        }}>
+                                        {product.name}
+                                    </h3>
+                                </Link>
+                                
+                                {/* Row 3: Price - Fixed height */}
+                                <div className="h-8 flex items-center">
+                                    <span className="text-[16px] font-[500] text-[#3B2305]">₦{product.price.toLocaleString()}</span>
+                                </div>
+                                
+                                {/* Row 4: Add to Bag Button - Fixed height */}
+                                <div className="pb-3">
+                                    <CartButton
+                                        product={product}
+                                        className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
                                     />
-                                </button>
+                                </div>
                             </div>
-                            <div className="flex flex-col md:flex-row justify-between p-3 pl-0 items-start md:items-center">
-                                <span className="text-[16px] font-[600] md:font-[500] text-[#3B2305]">{product.name}</span>
-                                <span className="text-[16px] font-[500] text-[#3B2305]">₦{product.price.toLocaleString()}</span>
-                            </div>
-                            <div className="pb-3 block md:hidden">
-                                <CartButton
-                                    product={product}
-                                    className="w-full py-2 border border-[#D1B99B] text-[#3B2305] rounded-[4px] text-center text-[14px] font-medium hover:bg-[#F9F5F0] border-[0.5px] transition-colors"
-                                />
-                            </div>
-                        </Link>
+                        </div>
                     ))}
+
+                    
                 </div>
+                <Link
+                            href="/new-arrivals"
+                            className="bg-[#C97203] font-inter hover:bg-[#B56503] text-white rounded-[4px] py-[12px] px-[40px] text-base font-medium inline-block text-center transition-colors w-fit mt-4"
+                        >
+                            Explore all Products
+                        </Link>
             </div>
 
             {/* Quick View Modal */}

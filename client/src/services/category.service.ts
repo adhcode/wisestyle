@@ -1,26 +1,5 @@
 import { apiClient } from '@/utils/api-client';
-
-export interface Category {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    type: string;
-    isActive: boolean;
-    imageUrl?: string;
-    image?: string;
-    displayOrder: number;
-    parentId?: string;
-    parent?: Category;
-    children: Category[];
-    products?: any[];
-    _count: {
-        products: number;
-        children: number;
-    };
-    createdAt: string;
-    updatedAt: string;
-}
+import { Category } from '@/types';
 
 export interface CreateCategoryDto {
     name: string;

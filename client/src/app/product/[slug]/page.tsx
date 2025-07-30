@@ -253,10 +253,13 @@ export default function ProductPage({ params }: ProductPageProps) {
                     <h1 className="text-lg sm:text-xl md:text-2xl font-medium text-[#1E1E1E] leading-tight">{product.name}</h1>
                     <div className="flex items-center gap-2 sm:gap-3">
                         <span className="text-lg sm:text-xl font-semibold text-[#C97203]">₦{product.price.toLocaleString()}</span>
-                        {product.originalPrice && product.originalPrice > product.price && (
-                            <span className="text-sm sm:text-base text-[#3B2305] line-through opacity-60">₦{product.originalPrice.toLocaleString()}</span>
+                        {product.discount && product.discount > 0 && (
+                            <span className="text-xs px-2 py-1 bg-[#FCF0E3] text-[#c23b3b] rounded font-medium">
+                                {Math.round(product.discount)}% OFF
+                            </span>
                         )}
                     </div>
+
                     {/* Colour Selector */}
                     {product.colors && product.colors.length > 0 && (
                         <div>
@@ -298,7 +301,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                             )}
                         </div>
                     )}
-                    {/* Add to Cart and Wishlist */}
+                    {/* Add to Bag and Wishlist */}
                     <div className="flex gap-2 mt-2">
                         <button
                             onClick={handleAddToCart}

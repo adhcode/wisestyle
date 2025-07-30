@@ -49,8 +49,8 @@ export default function CartPage() {
     if (items.length === 0) {
         return (
             <div className="min-h-screen bg-[#FFFCF8] flex flex-col items-center px-4 mt-16">
-                <h1 className="text-2xl font-semibold text-[#3B2305] mb-2">Your cart is empty</h1>
-                <p className="mb-4 text-[#3B2305]">Add some items to your cart to see them here.</p>
+                <h1 className="text-2xl font-semibold text-[#3B2305] mb-2">Your bag is empty</h1>
+                <p className="mb-4 text-[#3B2305]">Add some items to your bag to see them here.</p>
                 <Link href="/" className="inline-block bg-[#C97203] hover:bg-[#B56503] text-white px-8 py-3 text-base rounded-[4px] font-medium font-inter transition-colors">Continue Shopping</Link>
             </div>
         );
