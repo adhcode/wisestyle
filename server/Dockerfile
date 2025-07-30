@@ -1,32 +1,27 @@
-########## 1️⃣  Build stage ####################################################
-FROM node:18-alpine AS builder
+# Use Node.js 18 Alpine
+FROM node:18-alpine
+
+# Set working directory
 WORKDIR /app
 
-# Install full deps (includes dev) -------------------------------------------
+# Copy package files
 COPY package*.json ./
-COPY prisma ./prisma
-RUN npm install --legacy-peer-deps
+COPY prisma ./prisma/
 
-# Generate Prisma client & build NestJS --------------------------------------
+# Install dependencies
+RUN npm ci --only=production
+
+# Generate Prisma client
 RUN npx prisma generate
+
+# Copy source code
 COPY . .
+
+# Build the application
 RUN npm run build
 
+# Expose port
+EXPOSE 3000
 
-########## 2️⃣  Runtime stage ##################################################
-FROM node:18-alpine
-WORKDIR /usr/src/app
-
-# Copy production node_modules, dist, prisma, and start script ---------------
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package*.json ./
-COPY start.sh ./start.sh
-RUN chmod 755 ./start.sh
-
-# Expose port Railway (and dev) expect ---------------------------------------
-EXPOSE 3001
-
-# Launch ---------------------------------------------------------------------
-CMD ["sh", "-c", "echo 'Container starting...' && echo 'Current dir:' && pwd && echo 'Files:' && ls -la && echo 'Dist contents:' && ls -la dist/ && echo 'Starting Node...' && node dist/main.js"]
+# Start the application
+CMD ["npm", "run", "start:prod"]
