@@ -25,7 +25,8 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "clear:orders": "node scripts/clear-orders.js",
     "clear:test-orders": "node scripts/clear-test-orders.js",
-    "test:build": "chmod +x test-build.sh && ./test-build.sh"
+    "test:build": "chmod +x test-build.sh && ./test-build.sh",
+    "test:health": "chmod +x test-health.sh && ./test-health.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

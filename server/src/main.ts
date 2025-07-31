@@ -10,6 +10,11 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  
+  logger.log('🚀 Starting NestJS application...');
+  logger.log(`Node.js version: ${process.version}`);
+  logger.log(`Working directory: ${process.cwd()}`);
+  
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
@@ -114,14 +119,20 @@ async function bootstrap() {
   // Get port from environment variable or use default
   const port = process.env.PORT || 3001;
   
-  await app.listen(port, '0.0.0.0', () => {
-    logger.log(`Application is running on port ${port}`);
-    logger.log(`Environment: ${process.env.NODE_ENV}`);
-    logger.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
-    logger.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
-    logger.log(`Database URL configured: ${!!process.env.DATABASE_URL}`);
-    logger.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
-  });
+  try {
+    await app.listen(port, '0.0.0.0', () => {
+      logger.log(`✅ Application is running on port ${port}`);
+      logger.log(`Environment: ${process.env.NODE_ENV}`);
+      logger.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+      logger.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
+      logger.log(`Database URL configured: ${!!process.env.DATABASE_URL}`);
+      logger.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
+      logger.log(`Health check available at: http://localhost:${port}/health`);
+    });
+  } catch (error) {
+    logger.error('❌ Failed to start application:', error);
+    process.exit(1);
+  }
 }
 
 process.on('unhandledRejection', (reason, promise) => {
