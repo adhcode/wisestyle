@@ -1,8 +1,8 @@
 [build]
-buildCommand = "npm install --legacy-peer-deps && npm run build"
+buildCommand = "npm install --legacy-peer-deps && npx prisma generate && npm run build"
 
 [deploy]
-startCommand = "npm run start:prod"
+startCommand = "npx prisma migrate deploy && npm run start:prod"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

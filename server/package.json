@@ -24,7 +24,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
     "clear:orders": "node scripts/clear-orders.js",
-    "clear:test-orders": "node scripts/clear-test-orders.js"
+    "clear:test-orders": "node scripts/clear-test-orders.js",
+    "test:build": "chmod +x test-build.sh && ./test-build.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
