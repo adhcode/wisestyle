@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import * as sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 import { welcomeEmailTemplate } from './templates/welcome';
 import { passwordResetTemplate } from './templates/password-reset';
 import { verifyEmailTemplate } from './templates/verify-email';
@@ -13,7 +13,7 @@ import { htmlToText } from 'html-to-text';
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter | null = null;
-  private readonly useSendGrid: boolean;
+  private useSendGrid: boolean;
   private readonly logger = new Logger(MailService.name);
   private readonly fromEmail: string;
 
@@ -22,12 +22,24 @@ export class MailService {
             this.fromEmail = this.configService.get<string>('SENDGRID_FROM_EMAIL') || 'hello@wisestyleshop.com';
 
     if (sendGridApiKey) {
-      // Prefer SendGrid if API key is provided
-      sgMail.setApiKey(sendGridApiKey);
-      this.useSendGrid = true;
-      this.logger.log('SendGrid integration enabled for MailService');
+      try {
+        // Prefer SendGrid if API key is provided
+        sgMail.setApiKey(sendGridApiKey);
+        this.useSendGrid = true;
+        this.logger.log('SendGrid integration enabled for MailService');
+      } catch (error) {
+        this.logger.error('Failed to initialize SendGrid:', error);
+        this.useSendGrid = false;
+        this.initializeSMTPTransporter();
+      }
     } else {
       this.useSendGrid = false;
+      this.initializeSMTPTransporter();
+    }
+  }
+
+  private initializeSMTPTransporter() {
+    try {
       // Fallback to Mailtrap SMTP (development)
       this.transporter = nodemailer.createTransport({
         host: this.configService.get<string>('MAIL_HOST') || 'sandbox.smtp.mailtrap.io',
@@ -38,6 +50,9 @@ export class MailService {
         },
       });
       this.logger.warn('SendGrid API key not found – falling back to SMTP transport');
+    } catch (error) {
+      this.logger.error('Failed to initialize SMTP transporter:', error);
+      this.transporter = null;
     }
   }
 
@@ -90,8 +105,8 @@ export class MailService {
   }
 
   private async sendMail(to: string, subject: string, html: string) {
-    if (this.useSendGrid) {
-      try {
+    try {
+      if (this.useSendGrid) {
         const msg = {
           to,
           from: {
@@ -117,42 +132,39 @@ export class MailService {
           }
         } as any;
         const [response] = await sgMail.send(msg);
-        console.log('SendGrid email sent', response.statusCode);
+        this.logger.log(`SendGrid email sent to ${to}, status: ${response.statusCode}`);
         return response;
-      } catch (error) {
-        console.error('Error sending email via SendGrid:', error);
-        throw error;
-      }
-    } else {
-      if (!this.transporter) {
-        throw new Error('SMTP transporter not configured');
-      }
-      const mailOptions = {
-        from: `"WiseStyle" <${this.fromEmail}>`,
-        to,
-        subject,
-        html,
-        text: htmlToText(html),
-        headers: {
-          'List-Unsubscribe': '<mailto:unsubscribe@wisestyle.com>',
-          'X-Mailer': 'WiseStyle Email Service',
-          'X-Priority': '3',
-          'X-MSMail-Priority': 'Normal',
-          'Importance': 'Normal',
-          'X-Campaign': 'order-confirmation',
-          'X-Report-Abuse': 'Please report abuse here: abuse@wisestyle.com'
-        },
-        priority: 'normal' as const,
-        encoding: 'utf-8'
-      };
-      try {
+      } else {
+        if (!this.transporter) {
+          this.logger.warn(`Email service not configured - skipping email to ${to}`);
+          return { messageId: 'skipped', status: 'no-transport' };
+        }
+        const mailOptions = {
+          from: `"WiseStyle" <${this.fromEmail}>`,
+          to,
+          subject,
+          html,
+          text: htmlToText(html),
+          headers: {
+            'List-Unsubscribe': '<mailto:unsubscribe@wisestyle.com>',
+            'X-Mailer': 'WiseStyle Email Service',
+            'X-Priority': '3',
+            'X-MSMail-Priority': 'Normal',
+            'Importance': 'Normal',
+            'X-Campaign': 'order-confirmation',
+            'X-Report-Abuse': 'Please report abuse here: abuse@wisestyle.com'
+          },
+          priority: 'normal' as const,
+          encoding: 'utf-8'
+        };
         const info = await this.transporter.sendMail(mailOptions);
-        console.log('SMTP email sent:', info.messageId);
+        this.logger.log(`SMTP email sent to ${to}, messageId: ${info.messageId}`);
         return info;
-      } catch (error) {
-        console.error('Error sending email via SMTP:', error);
-        throw error;
       }
+    } catch (error) {
+      this.logger.error(`Failed to send email to ${to}:`, error);
+      // Don't throw the error to prevent application crashes
+      return { error: error.message, status: 'failed' };
     }
   }
 }
