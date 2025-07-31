@@ -61,7 +61,8 @@ export default function OrdersPage() {
 
     useEffect(() => {
         if (!authLoading && !user) {
-            router.push('/sign-in');
+            const currentPath = window.location.pathname;
+            router.push(`/sign-in?redirect=${encodeURIComponent(currentPath)}`);
             return;
         }
 

@@ -28,7 +28,8 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (mounted && !isLoading && !user) {
-            router.push('/sign-in');
+            const currentPath = window.location.pathname;
+            router.push(`/sign-in?redirect=${encodeURIComponent(currentPath)}`);
             return;
         }
     }, [user, router, mounted, isLoading]);
