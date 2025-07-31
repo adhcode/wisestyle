@@ -1,18 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as SendGrid from '@sendgrid/mail';
+import SendGrid from '@sendgrid/mail';
 
 @Injectable()
 export class NotificationService {
     private readonly logger = new Logger(NotificationService.name);
-    private readonly sendgridEnabled: boolean;
+    private sendgridEnabled: boolean;
 
     constructor(private configService: ConfigService) {
         const sendgridApiKey = this.configService.get<string>('SENDGRID_API_KEY');
         this.sendgridEnabled = !!sendgridApiKey;
         
         if (this.sendgridEnabled) {
-            SendGrid.setApiKey(sendgridApiKey);
+            try {
+                SendGrid.setApiKey(sendgridApiKey);
+                this.logger.log('SendGrid initialized for notifications');
+            } catch (error) {
+                this.logger.error('Failed to initialize SendGrid for notifications:', error);
+                this.sendgridEnabled = false;
+            }
         } else {
             this.logger.warn('SendGrid API key is not configured. Email notifications will be disabled.');
         }
@@ -55,7 +61,8 @@ export class NotificationService {
             return true;
         } catch (error) {
             this.logger.error('Failed to send payment notification:', error);
-            throw new Error('Failed to send payment notification');
+            // Don't throw to prevent application crashes
+            return false;
         }
     }
 
@@ -96,7 +103,8 @@ export class NotificationService {
             return true;
         } catch (error) {
             this.logger.error('Failed to send order notification:', error);
-            throw new Error('Failed to send order notification');
+            // Don't throw to prevent application crashes
+            return false;
         }
     }
 } 
