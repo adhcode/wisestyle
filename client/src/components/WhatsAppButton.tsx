@@ -22,17 +22,37 @@ export default function WhatsAppButton() {
         }, 500);
     };
 
-    const handleOptionSelect = (option: string) => {
+        const handleOptionSelect = (option: string) => {
         setSelectedOption(option);
         setIsTyping(true);
-
+        
         setTimeout(() => {
             setIsTyping(false);
             const message = encodeURIComponent(`Hello WiseStyle! ${option}`);
             const phoneNumber = "2349133472394";
             const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-            window.open(whatsappUrl, '_blank');
-
+            
+            // Better mobile handling for WhatsApp redirect
+            try {
+                // For mobile devices, try to open WhatsApp app directly
+                if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    // Try to open WhatsApp app first
+                    const whatsappAppUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+                    window.location.href = whatsappAppUrl;
+                    
+                    // Fallback to web version after a short delay if app doesn't open
+                    setTimeout(() => {
+                        window.location.href = whatsappUrl;
+                    }, 1000);
+                } else {
+                    // Desktop: open in new tab
+                    window.open(whatsappUrl, '_blank');
+                }
+            } catch (error) {
+                // Fallback to web version
+                window.location.href = whatsappUrl;
+            }
+            
             setTimeout(() => {
                 setIsChatOpen(false);
                 setShowWelcomeMessage(false);
@@ -70,7 +90,7 @@ export default function WhatsAppButton() {
         <>
             <button
                 onClick={handleWhatsAppClick}
-                className="whatsapp-button fixed bottom-6 right-6 z-50 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:bg-[#128C7E] transition-all duration-300 hover:scale-110 group md:bottom-6 md:right-6 bottom-32 right-4"
+                className="whatsapp-button fixed bottom-6 right-6 z-50 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:bg-[#128C7E] transition-all duration-300 hover:scale-110 group md:bottom-6 md:right-6 bottom-40 right-4"
                 aria-label="Chat with us on WhatsApp"
             >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -84,7 +104,7 @@ export default function WhatsAppButton() {
             </button>
 
             {isChatOpen && (
-                <div className="whatsapp-chat fixed bottom-24 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden md:bottom-24 md:right-6 bottom-44 right-4 md:w-80 w-[calc(100vw-2rem)] max-w-sm">
+                <div className="whatsapp-chat fixed bottom-24 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden md:bottom-24 md:right-6 bottom-52 right-4 md:w-80 w-[calc(100vw-2rem)] max-w-sm">
                     <div className="bg-[#25D366] text-white p-4 flex items-center gap-3">
                         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
