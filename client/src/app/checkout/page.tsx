@@ -14,7 +14,7 @@ import { TruckIcon, CreditCardIcon, CheckCircleIcon } from '@heroicons/react/24/
 import NigerianAddressForm from '@/components/NigerianAddressForm';
 import ShippingZoneFinder from '@/components/ShippingZoneFinder';
 import { Input } from '@/components/ui/input';
-import Script from 'next/script';
+
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
@@ -44,8 +44,7 @@ export default function CheckoutPage() {
     }
 
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'flutterwave' | 'paystack'>('flutterwave');
-    const [flutterwavePaymentType, setFlutterwavePaymentType] = useState<'card' | 'bank_transfer' | 'ng'>('card');
+    const [paymentMethod, setPaymentMethod] = useState<'paystack'>('paystack');
     const [email, setEmail] = useState('');
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [shippingAddress, setShippingAddress] = useState({
@@ -62,11 +61,7 @@ export default function CheckoutPage() {
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [activeSection, setActiveSection] = useState<'shipping' | 'billing' | 'contact' | null>('shipping');
     const [isShippingOpen, setIsShippingOpen] = useState(false);
-    const [paymentState, setPaymentState] = useState<'initial' | 'pin' | 'otp' | 'redirect'>('initial');
-    const [pin, setPin] = useState('');
-    const [otp, setOtp] = useState('');
-    const [paymentResponse, setPaymentResponse] = useState<any>(null);
-    const [flwReady, setFlwReady] = useState(false);
+
 
     // Redirect if cart is empty
     useEffect(() => {
@@ -251,197 +246,84 @@ export default function CheckoutPage() {
         }
     };
 
-    // Update the payment handler
+    // Payment handler - Paystack only
     const handlePayment = async () => {
         try {
             setIsLoading(true);
 
-            if (paymentMethod === 'flutterwave') {
-                // Create order first
-                const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        items: items.map(item => ({
-                            productId: item.id,
-                            quantity: item.quantity,
-                            price: item.price,
-                            color: item.selectedColor,
-                            size: item.selectedSize
-                        })),
-                        total: totalPrice,
-                        shippingAddress: getShippingAddressForOrder(),
-                        billingAddress: getBillingAddressForOrder(),
-                        shippingMethod: selectedShipping?.name,
-                        shippingCost: selectedShipping?.price || 0,
-                        email: contact.email || user?.email,
-                        phone: contact.phone
-                    }),
-                });
+            // Create order first
+            const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    items: items.map(item => ({
+                        productId: item.id,
+                        quantity: item.quantity,
+                        price: item.price,
+                        color: item.selectedColor,
+                        size: item.selectedSize
+                    })),
+                    total: totalPrice,
+                    shippingAddress: getShippingAddressForOrder(),
+                    billingAddress: getBillingAddressForOrder(),
+                    shippingMethod: selectedShipping?.name,
+                    shippingCost: selectedShipping?.price || 0,
+                    email: contact.email || user?.email,
+                    phone: contact.phone
+                }),
+            });
 
-                if (!orderResponse.ok) {
-                    const errorData = await orderResponse.json();
-                    throw new Error(errorData.message || 'Failed to create order');
-                }
-
-                const order = await orderResponse.json();
-
-                // Initialize Flutterwave payment
-                const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/initialize/flutterwave`;
-                console.log('Making payment request to:', fullUrl);
-                console.log('Request payload:', {
-                    orderId: order.id,
-                    amount: totalPrice + (selectedShipping?.price || 0),
-                    email: contact.email || user?.email || '',
-                    paymentMethod: flutterwavePaymentType,
-                });
-
-                const paymentResponse = await fetch(fullUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        orderId: order.id,
-                        amount: totalPrice + (selectedShipping?.price || 0),
-                        email: contact.email || user?.email || '',
-                        paymentMethod: flutterwavePaymentType,
-                        currency: 'NGN',
-                        customer: {
-                            name: shippingAddress.name,
-                            email: contact.email || user?.email || '',
-                            phone_number: contact.phone
-                        },
-                        customizations: {
-                            title: 'WiseStyle',
-                            description: 'Payment for your order',
-                            logo: 'https://wisestyle.com/logo.png'
-                        }
-                    }),
-                });
-
-                if (!paymentResponse.ok) {
-                    const errorData = await paymentResponse.json();
-                    throw new Error(errorData.message || 'Failed to initialize payment');
-                }
-
-                const paymentData = await paymentResponse.json();
-                console.log('Payment initialized successfully:', paymentData);
-
-                // New standard checkout flow returns a hosted payment link
-                if (paymentData.link) {
-                    // Redirect the user to Flutterwave hosted payment page
-                    window.location.href = paymentData.link as string;
-                    return;
-                }
-
-                // Handle different payment scenarios
-                if (paymentData.data?.authorization?.mode === 'pin') {
-                    setPaymentState('pin');
-                    setPaymentResponse(paymentData);
-                    return;
-                }
-
-                if (paymentData.data?.authorization?.mode === 'redirect') {
-                    setPaymentState('redirect');
-                    setPaymentResponse(paymentData);
-                    // Redirect to Flutterwave's 3DS page
-                    window.location.href = paymentData.data.authorization.redirect;
-                    return;
-                }
-
-                // If no special handling needed, proceed with verification
-                const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentData.data.flw_ref}`);
-                if (!verifyResponse.ok) {
-                    throw new Error('Payment verification failed');
-                }
-
-                const verifyData = await verifyResponse.json();
-                if (verifyData.status === 'success') {
-                    toast.success('Payment successful!');
-                    clearCart();
-                    router.push('/checkout/success');
-                } else {
-                    toast.error('Payment verification failed');
-                }
-            } else {
-                // Handle Paystack payment
-                // 1. Create the order first (same flow as Flutterwave)
-                const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        items: items.map(item => ({
-                            productId: item.id,
-                            quantity: item.quantity,
-                            price: item.price,
-                            color: item.selectedColor,
-                            size: item.selectedSize
-                        })),
-                        total: totalPrice,
-                        shippingAddress: getShippingAddressForOrder(),
-                        billingAddress: getBillingAddressForOrder(),
-                        shippingMethod: selectedShipping?.name,
-                        shippingCost: selectedShipping?.price || 0,
-                        email: contact.email || user?.email,
-                        phone: contact.phone
-                    }),
-                });
-
-                if (!orderRes.ok) {
-                    const errData = await orderRes.json();
-                    throw new Error(errData.message || 'Failed to create order');
-                }
-
-                const order = await orderRes.json();
-
-                // 2. Initialize Paystack payment via backend
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
-                console.log('Initializing Paystack payment with:', {
-                    orderId: order.id,
-                    amount: totalPrice + (selectedShipping?.price || 0),
-                    email: contact.email || user?.email || '',
-                    apiUrl
-                });
-
-                const initRes = await fetch(`${apiUrl}/api/payments/initialize/paystack`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        orderId: order.id,
-                        amount: totalPrice + (selectedShipping?.price || 0),
-                        email: contact.email || user?.email || '',
-                    }),
-                });
-
-                console.log('Paystack initialization response status:', initRes.status);
-
-                if (!initRes.ok) {
-                    const errData = await initRes.json().catch(() => ({ message: 'Network error' }));
-                    console.error('Paystack initialization error:', errData);
-                    throw new Error(errData.message || `HTTP ${initRes.status}: Failed to initialize Paystack payment`);
-                }
-
-                const initData = await initRes.json();
-                console.log('Paystack initialization data:', initData);
-
-                if (initData.status && initData.data?.authorization_url) {
-                    console.log('Redirecting to Paystack:', initData.data.authorization_url);
-                    // Add a small delay to ensure the payment record is created
-                    setTimeout(() => {
-                        window.location.href = initData.data.authorization_url as string;
-                    }, 500);
-                    return;
-                }
-
-                throw new Error('Unable to initiate Paystack payment - no authorization URL received');
+            if (!orderRes.ok) {
+                const errData = await orderRes.json();
+                throw new Error(errData.message || 'Failed to create order');
             }
+
+            const order = await orderRes.json();
+
+            // Initialize Paystack payment via backend
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app');
+            console.log('Initializing Paystack payment with:', {
+                orderId: order.id,
+                amount: totalPrice + (selectedShipping?.price || 0),
+                email: contact.email || user?.email || '',
+                apiUrl
+            });
+
+            const initRes = await fetch(`${apiUrl}/api/payments/initialize/paystack`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId: order.id,
+                    amount: totalPrice + (selectedShipping?.price || 0),
+                    email: contact.email || user?.email || '',
+                }),
+            });
+
+            console.log('Paystack initialization response status:', initRes.status);
+
+            if (!initRes.ok) {
+                const errData = await initRes.json().catch(() => ({ message: 'Network error' }));
+                console.error('Paystack initialization error:', errData);
+                throw new Error(errData.message || `HTTP ${initRes.status}: Failed to initialize Paystack payment`);
+            }
+
+            const initData = await initRes.json();
+            console.log('Paystack initialization data:', initData);
+
+            if (initData.status && initData.data?.authorization_url) {
+                console.log('Redirecting to Paystack:', initData.data.authorization_url);
+                // Add a small delay to ensure the payment record is created
+                setTimeout(() => {
+                    window.location.href = initData.data.authorization_url as string;
+                }, 500);
+                return;
+            }
+
+            throw new Error('Unable to initiate Paystack payment - no authorization URL received');
         } catch (error: unknown) {
             console.error('Payment error:', error);
             if (error instanceof Error) {
@@ -454,90 +336,15 @@ export default function CheckoutPage() {
         }
     };
 
-    // Add these new handler functions
-    const handlePinSubmit = async () => {
-        try {
-            setIsLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    pin,
-                    flw_ref: paymentResponse.data.flw_ref,
-                }),
-            });
 
-            if (!response.ok) {
-                throw new Error('Failed to verify PIN');
-            }
-
-            const data = await response.json();
-            if (data.status === 'success') {
-                toast.success('Payment successful!');
-                clearCart();
-                router.push('/checkout/success');
-            } else {
-                setPaymentState('otp');
-            }
-        } catch (error: unknown) {
-            console.error('PIN verification error:', error);
-            if (error instanceof Error) {
-                toast.error(error.message || 'Failed to verify PIN');
-            } else {
-                toast.error('Failed to verify PIN');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleOtpSubmit = async () => {
-        try {
-            setIsLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : 'https://wisestyle-api-production.up.railway.app')}/api/payments/verify/flutterwave/${paymentResponse.data.flw_ref}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    otp,
-                    flw_ref: paymentResponse.data.flw_ref,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to verify OTP');
-            }
-
-            const data = await response.json();
-            if (data.status === 'success') {
-                toast.success('Payment successful!');
-                clearCart();
-                router.push('/checkout/success');
-            } else {
-                toast.error('OTP verification failed');
-            }
-        } catch (error: unknown) {
-            console.error('OTP verification error:', error);
-            if (error instanceof Error) {
-                toast.error(error.message || 'Failed to verify OTP');
-            } else {
-                toast.error('Failed to verify OTP');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     // Validation for required fields
     const detailsValid = !!(
         selectedShipping &&
         contact.email &&
         contact.phone &&
-        (selectedShipping.type === 'pickup' || 
-         (selectedShipping.type === 'shipping' && shippingAddress.name && shippingAddress.address && shippingAddress.city && shippingAddress.area))
+        (selectedShipping.type === 'pickup' ||
+            (selectedShipping.type === 'shipping' && shippingAddress.name && shippingAddress.address && shippingAddress.city && shippingAddress.area))
     );
 
     // Update toggle functions
@@ -744,7 +551,7 @@ export default function CheckoutPage() {
                                                         </svg>
                                                         <span>Find Your Delivery Zone</span>
                                                     </h3>
-                                                    <ShippingZoneFinder 
+                                                    <ShippingZoneFinder
                                                         onZoneSelect={(zone) => handleShippingSelect(zone)}
                                                         className="mb-4"
                                                     />
@@ -760,40 +567,40 @@ export default function CheckoutPage() {
                                                     </h3>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         {shippingMethods.filter(method => method.type === 'shipping').map((method) => (
-                                                    <label
-                                                        key={method.name}
-                                                        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer
+                                                            <label
+                                                                key={method.name}
+                                                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer
                                                             ${selectedShipping?.name === method.name
-                                                                ? 'border-[#C97203] bg-[#F5F5F5] shadow-sm'
-                                                                : 'border-gray-200 hover:border-gray-300 active:border-[#C97203]/50'}`}
-                                                    >
-                                                        <div className="flex items-start gap-3 w-full">
-                                                            <input
-                                                                type="radio"
-                                                                name="shippingMethod"
-                                                                checked={selectedShipping?.name === method.name}
-                                                                onChange={() => handleShippingSelect(method)}
-                                                                className="w-4 h-4 text-black focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203] mt-1 flex-shrink-0"
-                                                            />
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                                                                    <div className="font-medium text-sm sm:text-base text-[#3B2305] truncate">
-                                                                        {method.name}
-                                                                    </div>
-                                                                    <div className="font-medium text-sm text-[#3B2305] sm:hidden">
-                                                                        ₦{method.price.toLocaleString()}
+                                                                        ? 'border-[#C97203] bg-[#F5F5F5] shadow-sm'
+                                                                        : 'border-gray-200 hover:border-gray-300 active:border-[#C97203]/50'}`}
+                                                            >
+                                                                <div className="flex items-start gap-3 w-full">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="shippingMethod"
+                                                                        checked={selectedShipping?.name === method.name}
+                                                                        onChange={() => handleShippingSelect(method)}
+                                                                        className="w-4 h-4 text-black focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203] mt-1 flex-shrink-0"
+                                                                    />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                                                            <div className="font-medium text-sm sm:text-base text-[#3B2305] truncate">
+                                                                                {method.name}
+                                                                            </div>
+                                                                            <div className="font-medium text-sm text-[#3B2305] sm:hidden">
+                                                                                ₦{method.price.toLocaleString()}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-xs sm:text-sm text-gray-600 mt-1">{method.deliveryTime}</div>
+                                                                        {method.address && (
+                                                                            <div className="text-xs text-gray-600 mt-1 break-words">
+                                                                                📍 {method.address}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-xs sm:text-sm text-gray-600 mt-1">{method.deliveryTime}</div>
-                                                                {method.address && (
-                                                                    <div className="text-xs text-gray-600 mt-1 break-words">
-                                                                        📍 {method.address}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="font-medium text-sm sm:text-base text-[#3B2305] hidden sm:block">₦{method.price.toLocaleString()}</div>
-                                                    </label>
+                                                                <div className="font-medium text-sm sm:text-base text-[#3B2305] hidden sm:block">₦{method.price.toLocaleString()}</div>
+                                                            </label>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -983,100 +790,26 @@ export default function CheckoutPage() {
                                 </div>
 
                                 <div className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <label
-                                            className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all
-                                                ${paymentMethod === 'flutterwave'
-                                                    ? 'border-black bg-gray-50 shadow-sm'
-                                                    : 'border-gray-200 hover:border-gray-300'}`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value="flutterwave"
-                                                checked={paymentMethod === 'flutterwave'}
-                                                onChange={() => setPaymentMethod('flutterwave')}
-                                                className="sr-only"
-                                            />
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg border border-gray-100">
-                                                    <img
-                                                        src="/images/payment/flutterwave.svg"
-                                                        alt="Flutterwave"
-                                                        className="h-8 w-auto"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-medium">Flutterwave</span>
-                                                    <span className="block text-xs text-gray-500 mt-1">Pay with card, bank transfer, or USSD</span>
-                                                </div>
+                                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg border border-gray-100">
+                                                <img
+                                                    src="/images/payment/paystack.svg"
+                                                    alt="Paystack"
+                                                    className="h-8 w-auto"
+                                                />
                                             </div>
-                                            <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center
-                                                ${paymentMethod === 'flutterwave' ? 'border-black' : 'border-gray-300'}`}
-                                            >
-                                                {paymentMethod === 'flutterwave' && (
-                                                    <div className="w-3 h-3 bg-black rounded-full"></div>
-                                                )}
-                                            </div>
-                                        </label>
-
-                                        <label
-                                            className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all
-                                                ${paymentMethod === 'paystack'
-                                                    ? 'border-black bg-gray-50 shadow-sm'
-                                                    : 'border-gray-200 hover:border-gray-300'}`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value="paystack"
-                                                checked={paymentMethod === 'paystack'}
-                                                onChange={() => setPaymentMethod('paystack')}
-                                                className="sr-only"
-                                            />
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg border border-gray-100">
-                                                    <img
-                                                        src="/images/payment/paystack.svg"
-                                                        alt="Paystack"
-                                                        className="h-8 w-auto"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-medium">Paystack</span>
-                                                    <span className="block text-xs text-gray-500 mt-1">Pay with card, bank transfer, or USSD</span>
-
-                                                </div>
-                                            </div>
-                                            <div className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center
-                                                ${paymentMethod === 'paystack' ? 'border-black' : 'border-gray-300'}`}
-                                            >
-                                                {paymentMethod === 'paystack' && (
-                                                    <div className="w-3 h-3 bg-black rounded-full"></div>
-                                                )}
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    {paymentMethod === 'paystack' && (
-                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex-shrink-0 w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                                                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-sm font-medium text-blue-800 mb-1">Payment Processing Information</h4>
-                                                    <ul className="text-xs text-blue-700 space-y-1">
-                                                        <li>• Card payments are processed instantly</li>
-                                                        <li>• You can safely close the payment page after initiating payment</li>
-                                                        <li>• We'll send email confirmation once payment is received</li>
-                                                    </ul>
-                                                </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-lg font-medium text-blue-800 mb-2">Paystack Payment</h4>
+                                                <p className="text-sm text-blue-700 mb-3">Secure payment processing with card, bank transfer, or USSD</p>
+                                                <ul className="text-xs text-blue-700 space-y-1">
+                                                    <li>• Card payments are processed instantly</li>
+                                                    <li>• You can safely close the payment page after initiating payment</li>
+                                                    <li>• We'll send email confirmation once payment is received</li>
+                                                </ul>
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
 
                                     <div className="p-4 bg-gray-50 rounded-lg">
                                         <h3 className="text-sm font-medium mb-2">Payment Summary</h3>
@@ -1090,8 +823,8 @@ export default function CheckoutPage() {
                                                     {selectedShipping?.type === 'pickup' ? 'Pickup' : 'Delivery'}
                                                 </span>
                                                 <span className={`${selectedShipping?.price === 0 ? 'text-green-600 font-medium' : ''}`}>
-                                                    {selectedShipping ? 
-                                                        (selectedShipping.price === 0 ? 'FREE' : `₦${selectedShipping.price.toLocaleString()}`) 
+                                                    {selectedShipping ?
+                                                        (selectedShipping.price === 0 ? 'FREE' : `₦${selectedShipping.price.toLocaleString()}`)
                                                         : '--'
                                                     }
                                                 </span>
@@ -1117,113 +850,11 @@ export default function CheckoutPage() {
                                         <span>We never store your card details</span>
                                     </div>
 
-                                    {paymentMethod === 'flutterwave' && (
-                                        <div className="mt-4 space-y-4">
-                                            <div className="flex flex-col space-y-2">
-                                                <label className="text-sm font-medium text-gray-700">Payment Type</label>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <label className="relative flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                                        <input
-                                                            type="radio"
-                                                            name="flutterwave-payment-type"
-                                                            value="card"
-                                                            checked={flutterwavePaymentType === 'card'}
-                                                            onChange={() => setFlutterwavePaymentType('card')}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
-                                                            <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                                                </svg>
-                                                            </div>
-                                                            <span className="text-sm font-medium">Card</span>
-                                                        </div>
-                                                    </label>
 
-                                                    <label className="relative flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                                        <input
-                                                            type="radio"
-                                                            name="flutterwave-payment-type"
-                                                            value="bank_transfer"
-                                                            checked={flutterwavePaymentType === 'bank_transfer'}
-                                                            onChange={() => setFlutterwavePaymentType('bank_transfer')}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
-                                                            <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                                                </svg>
-                                                            </div>
-                                                            <span className="text-sm font-medium">Bank Transfer</span>
-                                                        </div>
-                                                    </label>
 
-                                                    <label className="relative flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                                        <input
-                                                            type="radio"
-                                                            name="flutterwave-payment-type"
-                                                            value="ng"
-                                                            checked={flutterwavePaymentType === 'ng'}
-                                                            onChange={() => setFlutterwavePaymentType('ng')}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className="flex items-center justify-center flex-col md:flex-row space-x-3">
-                                                            <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border border-gray-100">
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                                </svg>
-                                                            </div>
-                                                            <span className="text-sm font-medium">Direct Debit</span>
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {paymentState === 'pin' && (
-                                        <div className="mt-4 p-4 border rounded-lg">
-                                            <h3 className="text-lg font-medium mb-4">Enter PIN</h3>
-                                            <input
-                                                type="password"
-                                                value={pin}
-                                                onChange={(e) => setPin(e.target.value)}
-                                                className="w-full p-2 border rounded focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203] transition-colors"
-                                                placeholder="Enter your PIN"
-                                                maxLength={4}
-                                            />
-                                            <button
-                                                onClick={handlePinSubmit}
-                                                disabled={!pin || pin.length !== 4 || isLoading}
-                                                className="mt-4 w-full bg-black text-white py-2 px-4 rounded disabled:opacity-50"
-                                            >
-                                                {isLoading ? 'Verifying...' : 'Submit PIN'}
-                                            </button>
-                                        </div>
-                                    )}
 
-                                    {paymentState === 'otp' && (
-                                        <div className="mt-4 p-4 border rounded-lg">
-                                            <h3 className="text-lg font-medium mb-4">Enter OTP</h3>
-                                            <input
-                                                type="text"
-                                                value={otp}
-                                                onChange={(e) => setOtp(e.target.value)}
-                                                className="w-full p-2 border rounded focus:ring-1 focus:ring-[#C97203] focus:border-[#C97203] transition-colors"
-                                                placeholder="Enter OTP"
-                                                maxLength={6}
-                                            />
-                                            <button
-                                                onClick={handleOtpSubmit}
-                                                disabled={!otp || otp.length !== 6 || isLoading}
-                                                className="mt-4 w-full bg-black text-white py-2 px-4 rounded disabled:opacity-50"
-                                            >
-                                                {isLoading ? 'Verifying...' : 'Submit OTP'}
-                                            </button>
-                                        </div>
-                                    )}
+
 
                                     <button
                                         className="w-full bg-[#C97203] text-white py-4 px-6 rounded-lg hover:bg-[#C97203]/90 transition-colors font-medium text-sm"
@@ -1294,11 +925,7 @@ export default function CheckoutPage() {
                     </div>
                 </div>
             </div>
-            <Script
-                src="https://checkout.flutterwave.com/v3.js"
-                strategy="afterInteractive"
-                onLoad={() => setFlwReady(true)}
-            />
+
         </div>
     );
 } 
