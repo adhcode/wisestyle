@@ -8,11 +8,23 @@ export default function WhatsAppButton() {
     const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
     const [selectedOption, setSelectedOption] = useState<string>('');
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleWhatsAppClick = () => {
         setIsChatOpen(true);
         setShowWelcomeMessage(true);
-
+        
         setTimeout(() => {
             setIsTyping(true);
             setTimeout(() => {
@@ -22,7 +34,7 @@ export default function WhatsAppButton() {
         }, 500);
     };
 
-        const handleOptionSelect = (option: string) => {
+    const handleOptionSelect = (option: string) => {
         setSelectedOption(option);
         setIsTyping(true);
         
@@ -69,6 +81,7 @@ export default function WhatsAppButton() {
         setSelectedOption('');
     };
 
+    // Close chat when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
@@ -90,7 +103,12 @@ export default function WhatsAppButton() {
         <>
             <button
                 onClick={handleWhatsAppClick}
-                className="whatsapp-button fixed bottom-6 right-6 z-50 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:bg-[#128C7E] transition-all duration-300 hover:scale-110 group md:bottom-6 md:right-6 bottom-40 right-4"
+                className="whatsapp-button fixed z-50 bg-[#25D366] text-white p-4 rounded-full shadow-lg hover:bg-[#128C7E] transition-all duration-300 hover:scale-110 group"
+                style={{
+                    bottom: isMobile ? '200px' : '24px',
+                    right: isMobile ? '16px' : '24px',
+                    zIndex: 50
+                }}
                 aria-label="Chat with us on WhatsApp"
             >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -104,7 +122,16 @@ export default function WhatsAppButton() {
             </button>
 
             {isChatOpen && (
-                <div className="whatsapp-chat fixed bottom-24 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden md:bottom-24 md:right-6 bottom-52 right-4 md:w-80 w-[calc(100vw-2rem)] max-w-sm">
+                <div 
+                    className="whatsapp-chat fixed z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden md:w-80"
+                    style={{
+                        bottom: isMobile ? '280px' : '96px',
+                        right: isMobile ? '16px' : '24px',
+                        width: isMobile ? 'calc(100vw - 32px)' : '320px',
+                        maxWidth: '320px',
+                        zIndex: 50
+                    }}
+                >
                     <div className="bg-[#25D366] text-white p-4 flex items-center gap-3">
                         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
