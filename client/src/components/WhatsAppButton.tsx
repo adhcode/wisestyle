@@ -14,17 +14,17 @@ export default function WhatsAppButton() {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
         };
-        
+
         checkMobile();
         window.addEventListener('resize', checkMobile);
-        
+
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     const handleWhatsAppClick = () => {
         setIsChatOpen(true);
         setShowWelcomeMessage(true);
-        
+
         setTimeout(() => {
             setIsTyping(true);
             setTimeout(() => {
@@ -37,13 +37,13 @@ export default function WhatsAppButton() {
     const handleOptionSelect = (option: string) => {
         setSelectedOption(option);
         setIsTyping(true);
-        
+
         setTimeout(() => {
             setIsTyping(false);
             const message = encodeURIComponent(`Hello WiseStyle! ${option}`);
             const phoneNumber = "2349133472394";
             const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-            
+
             // Better mobile handling for WhatsApp redirect
             try {
                 // For mobile devices, try to open WhatsApp app directly
@@ -51,7 +51,7 @@ export default function WhatsAppButton() {
                     // Try to open WhatsApp app first
                     const whatsappAppUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
                     window.location.href = whatsappAppUrl;
-                    
+
                     // Fallback to web version after a short delay if app doesn't open
                     setTimeout(() => {
                         window.location.href = whatsappUrl;
@@ -64,7 +64,7 @@ export default function WhatsAppButton() {
                 // Fallback to web version
                 window.location.href = whatsappUrl;
             }
-            
+
             setTimeout(() => {
                 setIsChatOpen(false);
                 setShowWelcomeMessage(false);
@@ -122,7 +122,7 @@ export default function WhatsAppButton() {
             </button>
 
             {isChatOpen && (
-                <div 
+                <div
                     className="whatsapp-chat fixed z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden md:w-80"
                     style={{
                         bottom: isMobile ? '280px' : '96px',

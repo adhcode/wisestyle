@@ -55,10 +55,10 @@ export default function ReturnsPolicyPage() {
                         <div className="bg-[#F0F9FF] border border-[#E0F2FE] rounded-lg p-6">
                             <div className="flex items-center gap-3 mb-4">
                                 <CheckCircle className="w-6 h-6 text-green-600" />
-                                <h3 className="text-lg font-semibold text-[#1E1E1E]">14-Day Return Policy</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E]">7-Day Return Policy</h3>
                             </div>
                             <p className="text-[#3B2305]">
-                                You have <strong>14 days</strong> from the date of delivery to return your item(s) for a refund or exchange.
+                                You have <strong>7 days</strong> from the date of delivery to return your item(s) for a refund or exchange.
                                 The item must be in its original condition, unworn, unwashed, and with all original tags attached.
                             </p>
                         </div>
@@ -82,7 +82,7 @@ export default function ReturnsPolicyPage() {
                                     <li>• Unworn and unwashed items</li>
                                     <li>• All original tags attached</li>
                                     <li>• Original packaging included</li>
-                                    <li>• Within 14 days of delivery</li>
+                                    <li>• Within 7 days of delivery</li>
                                 </ul>
                             </div>
 
@@ -224,7 +224,7 @@ export default function ReturnsPolicyPage() {
                         <div className="bg-[#F0F9FF] border border-[#E0F2FE] rounded-lg p-6 space-y-4">
                             <h3 className="text-lg font-semibold text-[#1E1E1E]">Size or Color Exchanges</h3>
                             <p className="text-[#3B2305]">
-                                If you need a different size or color, you can exchange your item within the 14-day return window.
+                                If you need a different size or color, you can exchange your item within the 7-day return window.
                                 Exchanges are subject to availability. If the desired item is not available, we'll process a refund instead.
                             </p>
                             <p className="text-[#3B2305]">

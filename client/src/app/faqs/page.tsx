@@ -67,7 +67,7 @@ export default function FAQsPage() {
         // Returns & Refunds
         {
             question: "What is your return policy?",
-            answer: "We offer a 14-day return policy for items in original condition, unworn, unwashed, and with all original tags attached. Sale and clearance items are final sale and cannot be returned. See our Returns & Refunds Policy for complete details.",
+            answer: "We offer a 7-day return policy for items in original condition, unworn, unwashed, and with all original tags attached. Sale and clearance items are final sale and cannot be returned. See our Returns & Refunds Policy for complete details.",
             category: "returns"
         },
         {
@@ -82,7 +82,7 @@ export default function FAQsPage() {
         },
         {
             question: "Can I exchange an item for a different size or color?",
-            answer: "Yes! You can exchange an item for a different size or color within the 14-day return window, subject to availability. If the desired item is not available, we'll process a refund instead. Follow the same return process and specify your exchange preference.",
+            answer: "Yes! You can exchange an item for a different size or color within the 7-day return window, subject to availability. If the desired item is not available, we'll process a refund instead. Follow the same return process and specify your exchange preference.",
             category: "returns"
         },
 

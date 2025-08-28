@@ -264,7 +264,7 @@ export default function ContactPage() {
                                     What is your return policy?
                                 </h3>
                                 <p className="text-sm text-[#3B2305]">
-                                    We offer a 14-day return policy for items in original condition.
+                                    We offer a 7-day return policy for items in original condition.
                                     See our{' '}
                                     <Link href="/returns-policy" className="text-[#C97203] hover:underline">
                                         Returns & Refunds Policy

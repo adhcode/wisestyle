@@ -172,7 +172,7 @@ export default function NativeWearPage() {
                                 What is your return policy?
                             </AccordionTrigger>
                             <AccordionContent className="pt-3 sm:pt-4 text-gray-600 text-xs sm:text-sm md:text-base">
-                                We accept returns within 14 days of delivery. Items must be unworn and in their original condition with all tags attached. Custom-made pieces are not eligible for returns.
+                                We accept returns within 7 days of delivery. Items must be unworn and in their original condition with all tags attached. Custom-made pieces are not eligible for returns.
                             </AccordionContent>
                         </AccordionItem>
 
