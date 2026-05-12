@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'react-hot-toast';
 import { Product } from '@/types/product';
 
 interface CartItem extends Product {
@@ -12,13 +11,16 @@ interface CartContextType {
     items: CartItem[];
     totalItems: number;
     totalPrice: number;
-    addItem: (item: CartItem, options?: { skipToast?: boolean }) => void;
+    addItem: (item: CartItem, options?: { showModal?: boolean }) => void;
     removeItem: (id: string) => void;
     updateQuantity: (id: string, quantity: number) => void;
     clearCart: () => void;
     isOpen: boolean;
     toggleCart: () => void;
     isLoaded: boolean;
+    lastAddedItem: CartItem | null;
+    showCartModal: boolean;
+    setShowCartModal: (show: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -27,6 +29,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
+    const [showCartModal, setShowCartModal] = useState(false);
 
     // Calculate total items and price whenever items change
     const totalItems = items.reduce((total, item) => total + item.quantity, 0);
@@ -67,7 +71,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items, isLoaded]);
 
-    const addItem = (item: CartItem, options?: { skipToast?: boolean }) => {
+    const addItem = (item: CartItem, options?: { showModal?: boolean }) => {
         setItems(prevItems => {
             const existingItem = prevItems.find(
                 i => i.id === item.id && i.selectedSize === item.selectedSize && i.selectedColor === item.selectedColor
@@ -84,37 +88,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
             return [...prevItems, item];
         });
 
-        if (!options?.skipToast) {
-            toast.success("Added to cart successfully!", {
-                position: 'bottom-center',
-                style: {
-                    borderRadius: '10px',
-                    background: '#222',
-                    color: '#fff',
-                    fontSize: '0.95rem',
-                    fontWeight: 400,
-                    boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
-                    padding: '8px 20px',
-                    textAlign: 'center',
-                    minWidth: '120px',
-                    maxWidth: '90vw',
-                    marginBottom: '32px',
-                },
-                duration: 1800,
-            });
+        // Store the last added item for the modal
+        setLastAddedItem(item);
+
+        // Show modal if requested (default is true)
+        if (options?.showModal !== false) {
+            setShowCartModal(true);
         }
     };
 
     const removeItem = (id: string) => {
         setItems(prevItems => prevItems.filter(item => item.id !== id));
-        toast.success('Item removed from cart', {
-            icon: '🗑️',
-            style: {
-                borderRadius: '10px',
-                background: '#333',
-                color: '#fff',
-            },
-        });
     };
 
     const updateQuantity = (id: string, quantity: number) => {
@@ -132,14 +116,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const clearCart = () => {
         setItems([]);
-        toast.success('Cart cleared', {
-            icon: '🧹',
-            style: {
-                borderRadius: '10px',
-                background: '#333',
-                color: '#fff',
-            },
-        });
     };
 
     const toggleCart = () => {
@@ -159,6 +135,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 isOpen,
                 toggleCart,
                 isLoaded,
+                lastAddedItem,
+                showCartModal,
+                setShowCartModal,
             }}
         >
             {children}

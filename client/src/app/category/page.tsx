@@ -92,7 +92,7 @@ export default function CategoriesPage() {
             selectedSize: 'Default',
             selectedColor: 'Default',
         };
-        addItem(cartItem);
+        addItem(cartItem, { showModal: true });
     };
 
     if (isLoading) {

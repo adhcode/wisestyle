@@ -43,6 +43,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     const { state: { likedProducts }, toggleLike } = useLikes();
     const { addItem } = useCart();
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -106,6 +107,8 @@ export default function ProductPage({ params }: ProductPageProps) {
     const handleAddToCart = () => {
         if (!product) return;
 
+        setIsAddingToCart(true);
+
         // Create proper cart item structure matching CartItem interface
         const cartItem = {
             id: product.id,
@@ -129,7 +132,12 @@ export default function ProductPage({ params }: ProductPageProps) {
             selectedColor: selectedColor || 'Default',
         };
 
-        addItem(cartItem);
+        addItem(cartItem, { showModal: true });
+
+        // Reset button state after 2 seconds
+        setTimeout(() => {
+            setIsAddingToCart(false);
+        }, 2000);
     };
 
     const decrementQuantity = () => {
@@ -305,9 +313,23 @@ export default function ProductPage({ params }: ProductPageProps) {
                     <div className="flex gap-2 mt-2">
                         <button
                             onClick={handleAddToCart}
-                            className="flex-1 h-12 bg-[#008A3A] text-white font-semibold rounded text-sm hover:bg-[#006c2c] transition-colors"
+                            disabled={isAddingToCart}
+                            className={`flex-1 h-12 font-semibold rounded text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                                isAddingToCart 
+                                    ? 'bg-[#006c2c] text-white cursor-not-allowed' 
+                                    : 'bg-[#008A3A] text-white hover:bg-[#006c2c]'
+                            }`}
                         >
-                            ADD TO BAG
+                            {isAddingToCart ? (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    ADDED TO BAG
+                                </>
+                            ) : (
+                                'ADD TO BAG'
+                            )}
                         </button>
                         <button
                             onClick={() => toggleLike(product.id)}

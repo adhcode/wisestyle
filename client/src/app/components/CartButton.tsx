@@ -11,7 +11,13 @@ interface CartButtonProps {
 export default function CartButton({ product, className = '', onSuccess }: CartButtonProps) {
     const { addItem } = useCart();
 
-    const handleAddToCart = () => {
+    const handleAddToCart = (e?: React.MouseEvent) => {
+        // Prevent navigation if button is inside a Link
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         const cartItem = {
             id: product.id.toString(),
             name: product.name,
@@ -34,7 +40,7 @@ export default function CartButton({ product, className = '', onSuccess }: CartB
             selectedColor: product.colors?.[0]?.value || 'Default',
         };
 
-        addItem(cartItem);
+        addItem(cartItem, { showModal: true });
         onSuccess?.();
     };
 

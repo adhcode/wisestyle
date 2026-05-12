@@ -80,7 +80,7 @@ export default function CategoryClient({ category, initialProducts }: CategoryCl
             selectedColorName: product.colors[0]?.name,
             selectedImage: product.image
         };
-        addItem(cartItem);
+        addItem(cartItem, { showModal: true });
     };
 
     if (loading) {

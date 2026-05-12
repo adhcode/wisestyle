@@ -9,6 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useLikes } from '@/contexts/LikesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { categoryService } from '@/services/category.service';
+import CartModal from '@/components/CartModal';
 
 // Define Category type for the tree
 interface CategoryTree {
@@ -22,13 +23,15 @@ const headerCategorySlugs = ['shirts', 'native-wear', 'trousers', 'accessories',
 
 export default function Header() {
     const router = useRouter();
-    const { totalItems } = useCart();
+    const { totalItems, lastAddedItem, showCartModal, setShowCartModal } = useCart();
     const { state: { likedProducts } } = useLikes();
     const { user, logout } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [categories, setCategories] = useState<CategoryTree[]>([]);
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
     const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
+    const cartIconRef = useRef<HTMLAnchorElement>(null);
+    const [cartModalPosition, setCartModalPosition] = useState({ top: 80, right: 20 });
 
     // Search functionality
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -71,6 +74,17 @@ export default function Header() {
 
         loadCategories();
     }, []);
+
+    // Update cart modal position when cart icon position changes
+    useEffect(() => {
+        if (cartIconRef.current && showCartModal) {
+            const rect = cartIconRef.current.getBoundingClientRect();
+            setCartModalPosition({
+                top: rect.bottom + 10,
+                right: window.innerWidth - rect.right,
+            });
+        }
+    }, [showCartModal]);
 
     // Handle search functionality
     const handleSearch = (e: React.FormEvent) => {
@@ -178,7 +192,11 @@ export default function Header() {
                         </Link>
 
                         {/* Cart with counter */}
-                        <Link href="/cart" className="text-[#3B2305] hover:text-[#C97203] relative flex items-center justify-center w-8 h-8">
+                        <Link 
+                            ref={cartIconRef}
+                            href="/cart" 
+                            className="text-[#3B2305] hover:text-[#C97203] relative flex items-center justify-center w-8 h-8"
+                        >
                             <Image src="/images/icons/cart.png" alt="Cart" width={20} height={20} />
                             {totalItems > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-[#C97203] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
@@ -369,6 +387,21 @@ export default function Header() {
                     </div>
                 )}
             </div>
+
+            {/* Cart Modal */}
+            <CartModal
+                isOpen={showCartModal}
+                onClose={() => setShowCartModal(false)}
+                item={lastAddedItem ? {
+                    name: lastAddedItem.name,
+                    price: lastAddedItem.price,
+                    image: lastAddedItem.image || '/images/products/placeholder-product.png',
+                    selectedSize: lastAddedItem.selectedSize,
+                    selectedColor: lastAddedItem.selectedColor,
+                    quantity: lastAddedItem.quantity,
+                } : null}
+                position={cartModalPosition}
+            />
         </header>
     );
 } 

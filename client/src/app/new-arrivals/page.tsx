@@ -54,7 +54,7 @@ export default function NewArrivalsPage() {
             selectedSize: 'Default',
             selectedColor: 'Default',
         };
-        addItem(cartItem);
+        addItem(cartItem, { showModal: true });
     };
 
     if (isLoading) {

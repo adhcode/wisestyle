@@ -227,43 +227,101 @@ export default function StyleAndSubstance() {
 
             {/* Quick View Modal */}
             {showModal && selectedProduct && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto relative">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden relative shadow-2xl">
+                        {/* Close Button */}
                         <button
                             onClick={closeModal}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-900"
+                            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-white transition-all shadow-lg"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
 
-                        <div className="flex flex-col md:flex-row">
+                        <div className="flex flex-col md:flex-row max-h-[90vh] overflow-y-auto">
                             {/* Product Image */}
-                            <div className="w-full md:w-1/2 relative h-[300px] md:h-[450px]">
-                                <Image
-                                    src={selectedProduct.image || '/images/placeholder.jpg'}
-                                    alt={selectedProduct.name}
-                                    fill
-                                    className="object-contain"
-                                />
+                            <div className="w-full md:w-1/2 bg-[#F9F5F0] flex items-center justify-center p-8 md:p-12">
+                                <div className="relative w-full aspect-[3/4] max-w-md">
+                                    <Image
+                                        src={selectedProduct.image || '/images/placeholder.jpg'}
+                                        alt={selectedProduct.name}
+                                        fill
+                                        className="object-contain"
+                                        sizes="(max-width: 768px) 100vw, 50vw"
+                                    />
+                                </div>
                             </div>
 
                             {/* Product Details */}
-                            <div className="w-full md:w-1/2 p-6 md:p-8">
-                                <h3 className="text-2xl font-medium text-[#3B2305] mb-2">{selectedProduct.name}</h3>
-                                <p className="text-xl font-medium text-[#3B2305] mb-6">₦{selectedProduct.price.toLocaleString()}</p>
+                            <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col">
+                                <div className="flex-1">
+                                    <h3 className="text-2xl md:text-3xl font-semibold text-[#3B2305] mb-3 leading-tight">
+                                        {selectedProduct.name}
+                                    </h3>
+                                    <p className="text-2xl md:text-3xl font-bold text-[#C97203] mb-6">
+                                        ₦{selectedProduct.price.toLocaleString()}
+                                    </p>
 
-                                <div className="flex flex-col gap-3 mt-8">
+                                    {/* Product Description */}
+                                    {selectedProduct.description && (
+                                        <div className="mb-6">
+                                            <p className="text-gray-600 text-sm md:text-base leading-relaxed line-clamp-4">
+                                                {selectedProduct.description}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Sizes */}
+                                    {selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
+                                        <div className="mb-6">
+                                            <p className="text-sm font-medium text-[#3B2305] mb-2">Available Sizes:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedProduct.sizes.map((size) => (
+                                                    <span
+                                                        key={size.id}
+                                                        className="px-3 py-1.5 border border-[#D1B99B] rounded text-sm text-[#3B2305]"
+                                                    >
+                                                        {size.value}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Colors */}
+                                    {selectedProduct.colors && selectedProduct.colors.length > 0 && (
+                                        <div className="mb-6">
+                                            <p className="text-sm font-medium text-[#3B2305] mb-2">Available Colors:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedProduct.colors.map((color) => (
+                                                    <div
+                                                        key={color.id}
+                                                        className="flex items-center gap-2 px-3 py-1.5 border border-[#D1B99B] rounded"
+                                                    >
+                                                        <div
+                                                            className="w-4 h-4 rounded-full border border-gray-300"
+                                                            style={{ backgroundColor: color.value }}
+                                                        />
+                                                        <span className="text-sm text-[#3B2305]">{color.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-col gap-3 mt-6 pt-6 border-t border-gray-200">
                                     <Link
                                         href={`/product/${selectedProduct.slug}`}
-                                        className="block w-full bg-[#3B2305] text-white py-3 rounded mb-3 text-center hover:bg-[#4c2d08] transition-colors"
+                                        className="w-full bg-[#3B2305] text-white py-3.5 rounded-lg text-center font-semibold hover:bg-[#4c2d08] transition-colors"
                                     >
                                         View Full Details
                                     </Link>
                                     <CartButton
                                         product={selectedProduct}
-                                        className="block w-full border border-[#D1B99B] text-[#3B2305] py-3 rounded text-center hover:bg-[#F9F5F0] transition-colors"
+                                        className="w-full border-2 border-[#3B2305] text-[#3B2305] py-3.5 rounded-lg text-center font-semibold hover:bg-[#F9F5F0] transition-colors"
                                         onSuccess={closeModal}
                                     />
                                 </div>
