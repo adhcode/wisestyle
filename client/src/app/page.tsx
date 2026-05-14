@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Hero from './components/Hero';
-import ProductSection, { Product } from './components/ProductSection';
+import ProductSection from './components/ProductSection';
 import { ProductService } from '@/services/product.service';
 import Link from 'next/link';
 import ShopByCategory from './components/ShopByCategory';
 import StyleAndSubstance from './components/StyleAndSubstance';
 import TrendingNow from './components/TrendingNow';
 import Reviews from './components/Reviews';
+import { Product } from '@/components/ProductCard';
 
 interface HomepageSection {
     id: string;

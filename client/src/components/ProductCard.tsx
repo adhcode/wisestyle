@@ -6,25 +6,9 @@ import Link from 'next/link';
 import { Heart, ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useLikes } from '@/contexts/LikesContext';
+import { Product } from '@/types/product';
 
-export interface Product {
-    id: string;
-    name: string;
-    price: number;
-    image?: string;
-    slug: string;
-    isLimited?: boolean;
-    sizes?: Array<{ id: string; value: string; name: string }>;
-    colors?: Array<{ id: string; value: string; name: string }>;
-    description?: string;
-    categoryId?: string;
-    images?: string[];
-    tags?: string[];
-    inventory?: any[];
-    displaySection?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
+export type { Product };
 
 interface ProductCardProps {
     product: Product;
@@ -47,18 +31,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             name: product.name,
             slug: product.slug,
             price: product.price,
-            description: product.description || '',
-            categoryId: product.categoryId || '',
+            description: product.description,
+            categoryId: product.categoryId,
             image: product.image || '/images/products/placeholder-product.png',
-            images: product.images || [product.image || '/images/products/placeholder-product.png'],
-            isLimited: product.isLimited || false,
-            sizes: product.sizes || [],
-            colors: product.colors || [],
-            tags: product.tags || [],
-            inventory: product.inventory || [],
-            displaySection: product.displaySection || 'NONE',
-            createdAt: product.createdAt || new Date(),
-            updatedAt: product.updatedAt || new Date(),
+            images: product.images,
+            isLimited: product.isLimited,
+            sizes: product.sizes,
+            colors: product.colors,
+            tags: product.tags,
+            inventory: product.inventory,
+            displaySection: product.displaySection,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
             quantity: 1,
             selectedSize: product.sizes?.[0]?.value || 'Default',
             selectedColor: product.colors?.[0]?.value || 'Default',
